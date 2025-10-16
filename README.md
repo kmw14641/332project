@@ -2,15 +2,11 @@
 
 ## Week1
 
-**Progress in the week:** other urgent project, named "Midterm"
+**Progress in the week:** initial setup
 
-**Goal of the next week:** other urgent project, named "Midterm"
-
-**Goal of the next week for each individual member:** other urgent project, named "Midterm"
-
-## Week2
-
-**Progress in the week:** other urgent project, named "Midterm"
+- create github repository
+- add collaborators
+- requests for access server cluster
 
 **Goal of the next week:** Design entire software without code
 
