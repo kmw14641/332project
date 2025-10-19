@@ -8,7 +8,7 @@
 - add collaborators
 - requests for access server cluster
 
-**Goal of the next week:** Design entire software without code
+**Goal of the next week:** Design entire software without code & Preparing the Basics for Collaboration
 
 - Understanding the details of the project through discussion
 - Make agreement for scala & sbt verison for collaborative work
