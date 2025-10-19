@@ -1,6 +1,6 @@
 # 332project
 
-## Week1 Progrese Report
+## Week1 Progress Report
 
 **Progress in the week:** initial setup
 
