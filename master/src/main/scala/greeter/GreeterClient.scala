@@ -16,4 +16,13 @@ class GreeterClient(implicit ec: ExecutionContext) {
       channel.shutdown()
     }
   }
+
+  def fansign() = {
+    val signs = (1 to 10).map(_ => sayHello())
+    for {
+      _ <- Future.sequence(signs)
+    } yield {
+      println("All done!")
+    }
+  }
 }
