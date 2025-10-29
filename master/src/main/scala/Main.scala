@@ -15,7 +15,7 @@ object Main extends App {
     server.start()
     println("Server started on port 8080")
 
-    new GreeterClient().sayHello()
+    new GreeterClient().fansign()
 
     server.awaitTermination()
 }
