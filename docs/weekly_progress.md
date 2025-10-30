@@ -34,5 +34,22 @@
 - Envionment setting(sbt, jdk, scala, initial repo setting)
 - Setting milestones
 - Allocate individual task
-
 **Goal of the next week for each individual member**: for design period, every work will processed by meeting
+
+## Week3 Progress Report
+
+**Progress in the week** 
+
+- Allocate individual task
+  - MinWoo Kim : Shuffle phase
+  - JongWon Lee : Disk-based merge sort phase
+  - HyeonSeo Park : Environment setting
+- Setting [milestones](https://github.com/kmw14641/332project/blob/main/docs/Milestone.md)
+- Implement some part of software
+
+**Goal of the next week:** Almost finish to implement software
+  
+**Goal of the next week for each individual member**
+- HyeonSeo Park : Finalizing environmental setting both for server & local
+- JongWon Lee : Finish implementing Disk-based merge sort
+- MinWoo Kim : Finish implementing Shuffle phase
