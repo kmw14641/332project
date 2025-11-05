@@ -6,6 +6,7 @@ x-app: &common
     - ../:/app
   command: ["tail", "-f", "/dev/null"]
   mem_limit: 2g
+  user: "$(id -u):$(id -g)"
 
 services:
   master:
