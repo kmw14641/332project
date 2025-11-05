@@ -1,0 +1,9 @@
+# build
+target
+
+# vscode
+.bloop
+metals.sbt
+.bsp
+.metals
+.vscode
