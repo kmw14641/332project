@@ -15,29 +15,21 @@ services:
     <<: *common
     container_name: master
     networks: { internal_net: { ipv4_address: 2.2.2.100 } }
-    expose:
-      - "7777"
 
   vm01:
     <<: *common
     container_name: vm01
     networks: { internal_net: { ipv4_address: 2.2.2.101 } }
-    expose:
-      - "22"
 
   vm02:
     <<: *common
     container_name: vm02
     networks: { internal_net: { ipv4_address: 2.2.2.102 } }
-    expose:
-      - "22"
 
   vm03:
     <<: *common
     container_name: vm03
     networks: { internal_net: { ipv4_address: 2.2.2.103 } }
-    expose:
-      - "22"
 
 networks:
   internal_net:
