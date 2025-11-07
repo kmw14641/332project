@@ -30,7 +30,7 @@ object Main extends App {
   val port = server.getPort
   println(s"$ip:$port")
 
-  new GreeterClient().fansign()
+  // new GreeterClient().fansign()
 
   server.awaitTermination()
 }
