@@ -7,17 +7,14 @@ import utils.MasterOptionUtils
 
 object Main extends App {
   implicit val ec: ExecutionContext = ExecutionContext.global
-  
-  val workersNum = MasterOptionUtils.parse(args) match {
-    case Some(num) => num
-    case None => sys.exit(1)
+
+  val workersNum = MasterOptionUtils.parse(args).getOrElse {
+    sys.exit(1)
   }
 
-  val ip = utils.AddrUtils.getAddr match {
-    case Some(addr) => addr
-    case None =>
-      println("Failed to get local IP address")
-      sys.exit(1)
+  val ip = utils.AddrUtils.getAddr.getOrElse {
+    println("Failed to get local IP address")
+    sys.exit(1)
   }
 
   val server = ServerBuilder
