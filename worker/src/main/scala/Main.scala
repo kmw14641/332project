@@ -1,4 +1,4 @@
-import utils.{WorkerOptionUtils, PathUtils}
+import worker.Worker
 
 object Main extends App {
   val (masterAddr, inputDirs, outputDir) = WorkerOptionUtils.parse(args).getOrElse {
@@ -19,4 +19,8 @@ object Main extends App {
   }
 
   PathUtils.createDirectoryIfNotExists(outputDir)
+
+  Worker.setMasterAddr(masterIp, masterPort)
+  Worker.setInputDirs(inputDirs)
+  Worker.setOutputDir(outputDir)
 }
