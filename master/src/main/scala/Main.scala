@@ -4,6 +4,8 @@ import greeter.Greeter.GreeterGrpc
 import greeter.GreeterImpl
 import greeter.GreeterClient
 import utils.MasterOptionUtils
+import master.{MasterServiceImpl, Master}
+import master.MasterService.MasterServiceGrpc
 
 object Main extends App {
   implicit val ec: ExecutionContext = ExecutionContext.global
@@ -12,14 +14,18 @@ object Main extends App {
     sys.exit(1)
   }
 
+  Master.setWorkersNum(workersNum)
+
   val ip = utils.AddrUtils.getAddr.getOrElse {
     println("Failed to get local IP address")
     sys.exit(1)
   }
 
+  val masterService = new MasterServiceImpl()
+
   val server = ServerBuilder
     .forPort(0)
-    .addService(GreeterGrpc.bindService(new GreeterImpl(), ec))
+    .addService(MasterServiceGrpc.bindService(masterService, ec))
     .build()
 
   server.start()
