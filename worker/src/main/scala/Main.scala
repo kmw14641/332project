@@ -20,4 +20,8 @@ object Main extends App {
   }
 
   PathUtils.createDirectoryIfNotExists(outputDir)
+
+  Worker.setMasterAddr(masterIp, masterPort)
+  Worker.setInputDirs(inputDirs)
+  Worker.setOutputDir(outputDir)
 }
