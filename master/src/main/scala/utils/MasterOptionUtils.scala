@@ -26,9 +26,5 @@ object MasterOptionUtils {
     parser
   }
 
-  def parse(args: Array[String]): Option[Int] = 
-    OParser.parse(getParser, args, Config()) match {
-      case Some(config) => Some(config.numWorkers)
-      case _            => None
-    }
+  def parse(args: Array[String]): Option[Int] = OParser.parse(getParser, args, Config()).map(_.numWorkers)
 }
