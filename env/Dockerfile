@@ -42,5 +42,6 @@ RUN curl -o /tmp/gensort.tar.gz https://www.ordinal.com/try.cgi/gensort-linux-1.
 # Working directory
 WORKDIR /app
 
+ENTRYPOINT ["/app/env/entrypoint.sh"]
 CMD ["/bin/bash"]
 
