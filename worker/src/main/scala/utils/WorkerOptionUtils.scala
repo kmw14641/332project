@@ -1,6 +1,7 @@
 package utils
 
 import scopt.OParser
+import java.net.InetAddress
 
 case class WorkerConfig(
   masterAddr: String = "",
@@ -21,7 +22,12 @@ object WorkerOptionUtils {
           .action((x, c) => c.copy(masterAddr = x))
           .text("master address in format ip:port")
           .validate(x =>
-            if (x.contains(":")) success
+            if (
+              x.split(":").length == 2 &&
+              scala.util.Try(InetAddress.getByName(x.split(":")(0))).isSuccess &&
+              scala.util.Try(x.split(":")(1).toInt).isSuccess &&
+              0 < x.split(":")(1).toInt && x.split(":")(1).toInt < 65536
+            ) success
             else failure("master address must be in format ip:port")
           ),
         opt[Seq[String]]('I', "input")
