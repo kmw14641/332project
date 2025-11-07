@@ -3,19 +3,15 @@ import scala.concurrent.ExecutionContext
 import greeter.Greeter.GreeterGrpc
 import greeter.GreeterImpl
 import greeter.GreeterClient
+import utils.MasterOptionUtils
 
 object Main extends App {
   implicit val ec: ExecutionContext = ExecutionContext.global
+  
+  val workersNum = MasterOptionUtils.parse(args) match {
+    case Some(num) => num
+    case None => sys.exit(1)
+  }
 
-  val server = ServerBuilder
-    .forPort(8080)
-    .addService(GreeterGrpc.bindService(new GreeterImpl(), ec))
-    .build()
-
-  server.start()
-  println("Server started on port 8080")
-
-  new GreeterClient().fansign()
-
-  server.awaitTermination()
+  println(s"Starting master with $workersNum workers")
 }
