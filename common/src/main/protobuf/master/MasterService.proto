@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package master;
+
+// Master service for worker registration
+service MasterService {
+  // Worker registers itself with the master
+  rpc RegisterWorker (WorkerInfo) returns (RegisterWorkerResponse) {}
+}
+
+// Worker information sent during registration
+message WorkerInfo {
+  string ip = 1;
+  int32 port = 2;
+  int64 ram_mb = 3;  // RAM capacity in MB
+}
+
+// Response from master after worker registration
+message RegisterWorkerResponse {
+  bool success = 1;
+}
