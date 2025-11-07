@@ -33,13 +33,14 @@ RUN curl -L -o /tmp/sbt.tgz https://github.com/sbt/sbt/releases/download/v1.11.7
 
 # Install gensort
 RUN curl -o /tmp/gensort.tar.gz https://www.ordinal.com/try.cgi/gensort-linux-1.5.tar.gz && \
-    tar -xzf /tmp/gensort.tar.gz -C /usr/local/bin && \
-    rm -f /tmp/gensort.tar.gz
+    mkdir -p /tmp/gensort && \
+    tar -xzf /tmp/gensort.tar.gz -C /tmp/gensort && \
+    mv /tmp/gensort/64/gensort /usr/local/bin/gensort && \
+    rm -rf /tmp/gensort /tmp/gensort.tar.gz
 
 # Working directory
 WORKDIR /app
-COPY ./entrypoint.sh /app/entrypoint.sh
 
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/app/env/entrypoint.sh"]
 CMD ["/bin/bash"]
 

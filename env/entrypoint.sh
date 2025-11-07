@@ -29,3 +29,6 @@ if [ "$ROLE" != "master" ]; then
     echo "Data generation complete!"
     echo "Total: $((NUM_DIRS * FILES_PER_DIR)) files, $((NUM_DIRS * FILES_PER_DIR * 32))MB of data"
 fi
+
+# Execute the CMD (or command from docker-compose)
+exec "$@"
