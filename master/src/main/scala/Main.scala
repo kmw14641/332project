@@ -18,9 +18,9 @@ object Main extends App {
   }
 
   val server = ServerBuilder
-  .forPort(0)
-  .addService(GreeterGrpc.bindService(new GreeterImpl(), ec))
-  .build()
+    .forPort(0)
+    .addService(GreeterGrpc.bindService(new GreeterImpl(), ec))
+    .build()
 
   server.start()
 
