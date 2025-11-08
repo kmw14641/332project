@@ -68,7 +68,7 @@ object Master {
     val workers = registeredWorkers.toSeq.sortBy(_._1).map {
       case (ip, info) => (ip, info.port)
     }
-    val rangesSeq = (1 to workersNum).map { i =>
+    val rangesSeq = (1 until workersNum).map { i =>
       val idx = ((i.toDouble / workersNum) * sortedKeys.length).toInt - 1
       sortedKeys(math.max(0, idx))
     }
@@ -79,7 +79,7 @@ object Master {
       rangeBuffer.append((previousKey, key))
       previousKey = key
     }
-    rangeBuffer.append((previousKey, ByteString.copyFrom(Array.fill[Byte](10)(-1))))  // Last range to infinity
+    rangeBuffer.append((previousKey, ByteString.copyFrom(Array.fill[Byte](1)(1) ++ Array.fill[Byte](10)(0))))  // Last range to infinity
 
     ranges = workers.zip(rangeBuffer).map {
       case ((ip, port), (start, end)) => ((ip, port) -> (start, end))
