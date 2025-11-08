@@ -9,7 +9,7 @@ object Master {
   private var workersNum: Int = -1
   private var registeredWorkers = Map[String, WorkerInfo]()
   private var samples = Map[String, Seq[ByteString]]()  // workerIp -> sampled keys
-  private var ranges = Seq[(ByteString, ByteString)]()  // (start, end) for each worker
+  private var ranges = Map[(String, Int), (ByteString, ByteString)]()  // (start, end) for each worker
 
   def setWorkersNum(num: Int): Unit = this.synchronized {
     workersNum = num
@@ -65,22 +65,28 @@ object Master {
     val sortedKeys = samples.values.flatten.toArray.sortWith((a, b) => comparator.compare(a, b) < 0)
 
     // Calculate quantiles to divide into workersNum ranges
-    val ranges = (1 to workersNum).map { i =>
+    val workers = registeredWorkers.toSeq.sortBy(_._1).map {
+      case (ip, info) => (ip, info.port)
+    }
+    val rangesSeq = (1 to workersNum).map { i =>
       val idx = ((i.toDouble / workersNum) * sortedKeys.length).toInt - 1
       sortedKeys(math.max(0, idx))
     }
 
-    // Create (start, end) pairs for each range
-    val rangePairs = ArrayBuffer[(ByteString, ByteString)]()
-    var previousKey: ByteString = ByteString.copyFrom(Array.fill[Byte](10)(0))
-    for (key <- ranges) {
-      rangePairs.append((previousKey, key))
+    val rangeBuffer = ArrayBuffer[(ByteString, ByteString)]()
+    var previousKey = ByteString.copyFrom(Array.fill[Byte](10)(0))
+    for (key <- rangesSeq) {
+      rangeBuffer.append((previousKey, key))
       previousKey = key
     }
-    rangePairs.append((previousKey, ByteString.copyFrom(Array.fill[Byte](10)(-1))))  // Last range goes to infinity
+    rangeBuffer.append((previousKey, ByteString.copyFrom(Array.fill[Byte](10)(-1))))  // Last range to infinity
+
+    ranges = workers.zip(rangeBuffer).map {
+      case ((ip, port), (start, end)) => ((ip, port) -> (start, end))
+    }.toMap
   }
 
-  def getRanges: Seq[(ByteString, ByteString)] = this.synchronized { ranges }
+  def getRanges: Map[(String, Int), (ByteString, ByteString)] = this.synchronized { ranges }
 
   def isRangesReady: Boolean = this.synchronized { ranges.nonEmpty }
 }
