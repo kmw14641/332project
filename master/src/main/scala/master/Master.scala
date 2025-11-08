@@ -23,7 +23,7 @@ object Master {
         registeredWorkers += (workerIp -> request)
         println(s"Fault detected! Re-register worker($workerIp:${request.port})")
         println(registeredWorkers.keys.mkString(", "))
-        
+
         true
       }
     }
@@ -38,7 +38,5 @@ object Master {
     }
   }
 
-  def getRegisteredWorkers: Map[String, WorkerInfo] = this.synchronized {
-    registeredWorkers.toMap
-  }
+  def getRegisteredWorkers: Map[String, WorkerInfo] = this.synchronized { registeredWorkers }
 }
