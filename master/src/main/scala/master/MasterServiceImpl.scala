@@ -13,8 +13,6 @@ import master.Master
 // 2. worker gives samples => register worker works well, dont care about it
 class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc.MasterService {
   override def registerWorker(request: WorkerInfo): Future[RegisterWorkerResponse] = {
-    val workerIp = request.ip
-
     Master.registerWorker(request)
     if (Master.getRegisteredWorkers.size == Master.getWorkersNum) {
       println(Master.getRegisteredWorkers.keys.mkString(", "))
