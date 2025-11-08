@@ -47,4 +47,6 @@ object Main extends App {
 
   val client = new MasterClient(masterIp, masterPort)
   client.registerWorker(workerIp, port, ramMb)
+
+  server.awaitTermination()
 }
