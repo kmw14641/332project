@@ -6,6 +6,9 @@ package master;
 service MasterService {
   // Worker registers itself with the master
   rpc RegisterWorker (WorkerInfo) returns (RegisterWorkerResponse) {}
+  
+  // Worker sends sampled keys to master
+  rpc Sampling (SampleData) returns (SampleResponse) {}
 }
 
 // Worker information sent during registration
@@ -17,5 +20,16 @@ message WorkerInfo {
 
 // Response from master after worker registration
 message RegisterWorkerResponse {
+  bool success = 1;
+}
+
+// Sampled keys sent from worker to master
+message SampleData {
+  string worker_ip = 1;
+  repeated bytes keys = 2;  // 10-byte keys
+}
+
+// Response from master after receiving samples
+message SampleResponse {
   bool success = 1;
 }

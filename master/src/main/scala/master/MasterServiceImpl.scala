@@ -2,7 +2,7 @@ package master
 
 import io.grpc.{Server, ServerBuilder}
 import scala.concurrent.{ExecutionContext, Future}
-import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse}
+import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse, SampleData, SampleResponse}
 import master.Master
 
 // TODO: handling fault tolerance
@@ -17,6 +17,16 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
 
     Future.successful(
       RegisterWorkerResponse(success = true)
+    )
+  }
+
+  override def sampling(request: SampleData): Future[SampleResponse] = {
+    val keys = request.keys
+    val success = Master.addSamples(request.workerIp, keys)
+
+
+    Future.successful(
+      SampleResponse(success = success)
     )
   }
 }
