@@ -22,7 +22,7 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
 
     // Store the assigned range in the Worker singleton
     Worker.setAssignedRange(workersRangeAssignment)
-    workersRangeAssignment.map {
+    workersRangeAssignment.foreach {
       // Print assigned ranges for debugging
       case ((ip, port), (start, end)) =>
         val startInt = new BigInteger(1, start.toByteArray())
