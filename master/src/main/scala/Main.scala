@@ -3,7 +3,7 @@ import scala.concurrent.ExecutionContext
 import greeter.Greeter.GreeterGrpc
 import greeter.GreeterImpl
 import greeter.GreeterClient
-import utils.MasterOptionUtils
+import utils.{MasterOptionUtils, SystemUtils}
 import master.{MasterServiceImpl, Master}
 import master.MasterService.MasterServiceGrpc
 
@@ -16,7 +16,7 @@ object Main extends App {
 
   Master.setWorkersNum(workersNum)
 
-  val ip = utils.AddrUtils.getAddr.getOrElse {
+  val ip = SystemUtils.getAddr.getOrElse {
     println("Failed to get local IP address")
     sys.exit(1)
   }
