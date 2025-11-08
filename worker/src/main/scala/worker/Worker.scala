@@ -8,7 +8,7 @@ object Worker {
   private var masterPort: Option[Int] = None
   private var inputDirs: Seq[String] = Nil
   private var outputDir: Option[String] = None
-  private var assignedRange: Option[(ByteString, ByteString)] = None
+  private var assignedRange: Option[Map[(String, Int), (ByteString, ByteString)]] = None
 
   def setMasterAddr(ip: String, port: Int): Unit = this.synchronized {
     masterIp = Some(ip)
@@ -38,11 +38,11 @@ object Worker {
     outputDir
   }
 
-  def setAssignedRange(rangeStart: ByteString, rangeEnd: ByteString): Unit = this.synchronized {
-    assignedRange = Some((rangeStart, rangeEnd))
+  def setAssignedRange(assignments: Map[(String, Int), (ByteString, ByteString)]): Unit = this.synchronized {
+    assignedRange = Some(assignments)
   }
 
-  def getAssignedRange: Option[(ByteString, ByteString)] = this.synchronized {
+  def getAssignedRange: Option[Map[(String, Int), (ByteString, ByteString)]] = this.synchronized {
     assignedRange
   }
 }
