@@ -1,18 +1,29 @@
 package worker
 
 import scala.concurrent.{ExecutionContext, Future}
-import worker.WorkerService.{WorkerServiceGrpc, RangeAssignment, RangeResponse}
+import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, RangeAssignment, WorkerNetworkInfo, SampledResponse, WorkerRangeAssignment}
+import io.grpc.Status
 
 class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc.WorkerService {
-  override def sampled(request: RangeAssignment): Future[RangeResponse] = {
-    val rangeStart = request.rangeStart
-    val rangeEnd = request.rangeEnd
+  override def sampled(request: WorkersRangeAssignment): Future[SampledResponse] = {
+    val workersRangeAssignment = request.assignments.map {
+      case workerRange => {
+        val workerInfo: WorkerNetworkInfo = workerRange.worker.getOrElse(
+          throw Status.INVALID_ARGUMENT.withDescription("WorkerNetworkInfo is missing").asRuntimeException()
+        )
+        val rangeInfo: RangeAssignment = workerRange.range.getOrElse(
+          throw Status.INVALID_ARGUMENT.withDescription("RangeAssignment is missing").asRuntimeException()
+        )
+
+        (workerInfo.ip, workerInfo.port) -> (rangeInfo.start, rangeInfo.end)
+      }
+    }.toMap
 
     // Store the assigned range in the Worker singleton
-    Worker.setAssignedRange(rangeStart, rangeEnd)
+    Worker.setAssignedRange(workersRangeAssignment)
 
     Future.successful(
-      RangeResponse(success = true)
+      SampledResponse(success = true)
     )
   }
 }
