@@ -3,7 +3,7 @@ package worker
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
-import worker.WorkerService.{WorkerServiceGrpc, RangeAssignment, RangeResponse}
+import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, WorkerRangeAssignment, WorkerNetworkInfo, RangeAssignment, SampledResponse}
 import com.google.protobuf.ByteString
 
 class WorkerClient(host: String, port: Int)(implicit ec: ExecutionContext) {
@@ -14,10 +14,14 @@ class WorkerClient(host: String, port: Int)(implicit ec: ExecutionContext) {
 
   private val stub = WorkerServiceGrpc.stub(channel)
 
-  def sampled(rangeStart: ByteString, rangeEnd: ByteString): Boolean = {
-    val request = RangeAssignment(
-      rangeStart = rangeStart,
-      rangeEnd = rangeEnd
+  def sampled(assignments: Map[(String, Int), (ByteString, ByteString)]): Boolean = {
+    val request = WorkersRangeAssignment(
+      assignments = assignments.map { case ((ip, port), (start, end)) =>
+        WorkerRangeAssignment(
+          worker = Some(WorkerNetworkInfo(ip = ip, port = port)),
+          range = Some(RangeAssignment(start = start, end = end))
+        )
+      }.toSeq
     )
 
     val responseFuture = stub.sampled(request)
