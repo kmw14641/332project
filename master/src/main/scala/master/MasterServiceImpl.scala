@@ -4,6 +4,7 @@ import io.grpc.{Server, ServerBuilder}
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse, SampleData, SampleResponse}
 import master.Master
+import worker.WorkerClient
 
 // TODO: handling fault tolerance
 // 1. worker shutdown after Master.registerWorker
@@ -27,11 +28,38 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
     // If all workers have sent samples, calculate ranges
     if (Master.getSampleSize == Master.getWorkersNum && success) {
       Master.calculateRanges()
+      // If ranges are ready, trigger range assignment
+      if (Master.isRangesReady) {
+        // Spawn a separate thread to assign ranges to workers
+        Future {
+          assignRangesToWorkers()
+        }
+      }
     }
 
 
     Future.successful(
       SampleResponse(success = success)
     )
+  }
+
+  private def assignRangesToWorkers(): Unit = {
+    val workers = Master.getRegisteredWorkers.toSeq.sortBy(_._1)  // Sort by IP for consistent ordering
+    val ranges = Master.getRanges
+
+    println("Assigning ranges to workers...")
+
+    for (
+      (ip, info) <- workers
+    ) {
+      val assign = Future {
+        val workerClient = new WorkerClient(ip, info.port)
+        workerClient.assignRanges(ranges)
+      }
+      assign.recover {
+        case e: Exception =>
+          println(s"Failed to assign range to worker $ip:${info.port}: ${e.getMessage}")
+      }
+    }
   }
 }
