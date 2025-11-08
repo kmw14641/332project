@@ -33,8 +33,6 @@ class MasterClient(host: String, port: Int)(implicit ec: ExecutionContext) {
       case e: Exception =>
         println(s"Error registering with master: ${e.getMessage}")
         sys.exit(1)
-    } finally {
-      channel.shutdown()
     }
   }
 
@@ -52,9 +50,8 @@ class MasterClient(host: String, port: Int)(implicit ec: ExecutionContext) {
     } catch {
       case e: Exception =>
         println(s"Error sending samples to master: ${e.getMessage}")
+        e.printStackTrace()
         false
-    } finally {
-      channel.shutdown()
     }
   }
 
