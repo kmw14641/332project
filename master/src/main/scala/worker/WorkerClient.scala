@@ -33,8 +33,6 @@ class WorkerClient(host: String, port: Int)(implicit ec: ExecutionContext) {
       case e: Exception =>
         println(s"Error assigning range to worker: ${e.getMessage}")
         false
-    } finally {
-      shutdown()
     }
   }
 
