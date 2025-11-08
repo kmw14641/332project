@@ -47,19 +47,16 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
 
     println("Assigning ranges to workers...")
 
-    // TODO: use multithreading to speed up
-    workers.zipWithIndex.foreach { case ((workerIp, workerInfo), idx) =>
-      if (idx < ranges.length) {
-        val (rangeStart, rangeEnd) = ranges(idx)
-        
-        // Create client to send range to worker
-        val workerClient = new worker.WorkerClient(workerInfo.ip, workerInfo.port)
-        try {
-          workerClient.sampled(rangeStart, rangeEnd)
-        } catch {
-          case e: Exception =>
-            println(s"Failed to assign range to worker $workerIp:${workerInfo.port}: ${e.getMessage}")
-        }
+    for (
+      (ip, info) <- workers
+    ) {
+      val assign = Future {
+        val workerClient = new worker.WorkerClient(ip, info.port)
+        workerClient.sampled(ranges)
+      }
+      assign.recover {
+        case e: Exception =>
+          println(s"Failed to assign range to worker $ip:${info.port}: ${e.getMessage}")
       }
     }
   }
