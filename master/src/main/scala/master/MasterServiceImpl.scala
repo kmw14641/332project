@@ -4,6 +4,7 @@ import io.grpc.{Server, ServerBuilder}
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse, SampleData, SampleResponse}
 import master.Master
+import worker.WorkerClient
 
 // TODO: handling fault tolerance
 // 1. worker shutdown after Master.registerWorker
@@ -51,7 +52,7 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
       (ip, info) <- workers
     ) {
       val assign = Future {
-        val workerClient = new worker.WorkerClient(ip, info.port)
+        val workerClient = new WorkerClient(ip, info.port)
         workerClient.sampled(ranges)
       }
       assign.recover {
