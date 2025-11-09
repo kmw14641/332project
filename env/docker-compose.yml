@@ -6,7 +6,6 @@ x-app: &common
     - ../:/app
   command: ["tail", "-f", "/dev/null"]
   mem_limit: 2g
-  user: "$(id -u):$(id -g)"
 
 services:
   master:
@@ -15,6 +14,8 @@ services:
     <<: *common
     container_name: master
     networks: { internal_net: { ipv4_address: 2.2.2.100 } }
+    environment:
+      - ROLE=master
 
   vm01:
     <<: *common

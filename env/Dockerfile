@@ -31,8 +31,17 @@ RUN curl -L -o /tmp/sbt.tgz https://github.com/sbt/sbt/releases/download/v1.11.7
     ln -s /usr/local/sbt/bin/sbt /usr/local/bin/sbt && \
     rm -f /tmp/sbt.tgz
 
+# Install gensort
+RUN curl -o /tmp/gensort.tar.gz https://www.ordinal.com/try.cgi/gensort-linux-1.5.tar.gz && \
+    mkdir -p /tmp/gensort && \
+    tar -xzf /tmp/gensort.tar.gz -C /tmp/gensort && \
+    mv /tmp/gensort/64/gensort /usr/local/bin/gensort && \
+    mv /tmp/gensort/64/valsort /usr/local/bin/valsort && \
+    rm -rf /tmp/gensort /tmp/gensort.tar.gz
+
 # Working directory
 WORKDIR /app
 
+ENTRYPOINT ["/app/env/entrypoint.sh"]
 CMD ["/bin/bash"]
 
