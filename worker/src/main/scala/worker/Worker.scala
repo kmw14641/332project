@@ -4,6 +4,8 @@ import com.google.protobuf.ByteString
 
 // Worker Singleton
 object Worker {
+  val firstMergeDir: String = "/tmp/first_merge"
+
   private var masterIp: Option[String] = None
   private var masterPort: Option[Int] = None
   private var inputDirs: Seq[String] = Nil
@@ -28,6 +30,14 @@ object Worker {
 
   def getInputDirs: Seq[String] = this.synchronized {
     inputDirs
+  }
+
+  def setWorkerInfo(infos: List[(String, Int)]): Unit = this.synchronized {
+    workerInfo = infos
+  }
+
+  def getWorkerInfo: List[(String, Int)] = this.synchronized {
+    workerInfo
   }
 
   def setOutputDir(dir: String): Unit = this.synchronized {
