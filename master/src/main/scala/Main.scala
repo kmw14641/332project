@@ -3,19 +3,31 @@ import scala.concurrent.ExecutionContext
 import greeter.Greeter.GreeterGrpc
 import greeter.GreeterImpl
 import greeter.GreeterClient
+import utils.{MasterOptionUtils, AddrUtils}
 
 object Main extends App {
-    implicit val ec: ExecutionContext = ExecutionContext.global
+  implicit val ec: ExecutionContext = ExecutionContext.global
 
-    val server = ServerBuilder
-      .forPort(8080)
-      .addService(GreeterGrpc.bindService(new GreeterImpl(), ec))
-      .build()
+  val workersNum = MasterOptionUtils.parse(args).getOrElse {
+    sys.exit(1)
+  }
 
-    server.start()
-    println("Server started on port 8080")
+  val ip = AddrUtils.getAddr.getOrElse {
+    println("Failed to get local IP address")
+    sys.exit(1)
+  }
 
-    new GreeterClient().fansign()
+  val server = ServerBuilder
+    .forPort(0)
+    .addService(GreeterGrpc.bindService(new GreeterImpl(), ec))
+    .build()
 
-    server.awaitTermination()
+  server.start()
+
+  val port = server.getPort
+  println(s"$ip:$port")
+
+  // new GreeterClient().fansign()
+
+  server.awaitTermination()
 }
