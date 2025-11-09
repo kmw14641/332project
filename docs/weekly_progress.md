@@ -53,3 +53,39 @@
 - HyeonSeo Park : Finalizing environmental setting both for server & local
 - JongWon Lee : Finish implementing Disk-based merge sort
 - MinWoo Kim : Finish implementing Shuffle phase
+
+## Week4 Progress Report
+
+**Progress in the week** 
+
+- Development environment setting
+  - set docker-compose for imitate server network environment @HyeonSeo Park
+    - https://github.com/kmw14641/332project/pull/2 - Merged
+    - Milestone 1-2 complete!
+  - automate gensort execution @JongWon Lee
+    - https://github.com/kmw14641/332project/pull/4 - Merged
+  - update server environment @HyeonSeo Park
+- Implement start part of program
+  - set repository structure, design code frame @MinWoo Kim
+    - https://github.com/kmw14641/332project/pull/1 - Merged
+  - implement master, worker command line parser @JongWon Lee
+    - https://github.com/kmw14641/332project/pull/5 - Reviewing
+    - https://github.com/kmw14641/332project/pull/6 - Reviewing
+- Implement sampling phase @JongWon Lee
+  - https://github.com/kmw14641/332project/pull/7 - Reviewing
+  - https://github.com/kmw14641/332project/pull/8 - Reviewing
+- Implement shuffle phase @MinWoo Kim
+  - https://github.com/kmw14641/332project/pull/9 - Reviewing
+- The implementation goal for the week was not fully met
+  - This could be due to the work being divided into more detailed phases than anticipated
+
+**Goal of the next week:**
+- Finish implementation of all part, including fault tolerance
+- No need to precisely work, refactoring tasks can be remained
+- Prepare presentation
+- Write docs for individual parts
+  
+**Goal of the next week for each individual member**
+- JongWon Lee : Finish implementing Disk-based merge sort
+- HyeonSeo Park : Finish implementing Synchronization Phase, State Restoration
+- MinWoo Kim : Finish implementing State Restoration
