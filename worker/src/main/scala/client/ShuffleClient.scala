@@ -8,6 +8,8 @@ import shuffle.Shuffle.{ShuffleGrpc, DownloadRequest, DownloadResponse}
 import scala.async.Async.{async, await}
 
 class ShuffleClient(implicit ec: ExecutionContext) {
+    val maxTries = 10
+
     // TODO: make it global
     val stubs = Worker.getAssignedRange.get.keys.map { case (ip, port) =>
         val channel = io.grpc.ManagedChannelBuilder.forAddress(ip, port).usePlaintext().build()
@@ -30,11 +32,17 @@ class ShuffleClient(implicit ec: ExecutionContext) {
         }
     }
 
-    private def processFile(workerIp: String, filename: String): Future[Unit] = async {
-        val stub = Worker.synchronized(stubs(workerIp))
-        val bytes: DownloadResponse = await { stub.downloadFile(DownloadRequest(filename = filename)) }
-        val targetPath = Paths.get(s"${Worker.shuffleDir}/$filename")
-        val _  = blocking { Files.write(targetPath, bytes.data.toByteArray, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
+    private def processFile(workerIp: String, filename: String, tries: Int = 1): Future[Unit] = {
+        async {
+            val stub = Worker.synchronized(stubs(workerIp))
+            val bytes: DownloadResponse = await { stub.downloadFile(DownloadRequest(filename = filename)) }
+            val targetPath = Paths.get(s"${Worker.shuffleDir}/$filename")
+            val _ = blocking { Files.write(targetPath, bytes.data.toByteArray, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
+        }.recoverWith {
+            case _ if tries <= maxTries => {
+                blocking { Thread.sleep(math.pow(2, tries).toLong) }
+                processFile(workerIp, filename, tries + 1)
+            }
+        }
     }
-
 }
