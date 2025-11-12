@@ -8,7 +8,7 @@ import worker.Worker
 
 class ShuffleServiceImpl(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuffle {
 	override def downloadFile(request: DownloadRequest): Future[DownloadResponse] = Future {
-        val sourcePath = Paths.get(s"${Worker.firstMergeDir}/${request.filename}")
+        val sourcePath = Paths.get(s"${Worker.mergeDir}/${request.filename}")
         val bytes = blocking { Files.readAllBytes(sourcePath) }
         DownloadResponse(data = ByteString.copyFrom(bytes))  // creates 3 copy. os heap -> jvm heap -> bytestring -> netty buffer
     }
