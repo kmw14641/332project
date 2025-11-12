@@ -32,9 +32,9 @@ class ShuffleClient(implicit ec: ExecutionContext) {
             iterators <- Iterator
                 .continually(receiverFileInfo.mapValues(_.iterator).toList)  // List((w1, it1), (w2, it2)) => List(((w1, it1), (w2, it2)), ((w1, it1), (w2, it2)), ...)
                 .takeWhile(_.exists { case (_, it) => it.hasNext })
-            (worker, iterator) <- iterators
+            (workerIp, iterator) <- iterators
             if iterator.hasNext
-        } yield (worker, iterator.next())
+        } yield (workerIp, iterator.next())
     }
 
     // chain: after process file, it finds another file to process
