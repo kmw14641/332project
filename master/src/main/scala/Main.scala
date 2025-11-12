@@ -4,6 +4,7 @@ import greeter.Greeter.GreeterGrpc
 import greeter.GreeterImpl
 import greeter.GreeterClient
 import utils.{MasterOptionUtils, AddrUtils}
+import master.Master
 
 object Main extends App {
   implicit val ec: ExecutionContext = ExecutionContext.global
@@ -11,6 +12,8 @@ object Main extends App {
   val workersNum = MasterOptionUtils.parse(args).getOrElse {
     sys.exit(1)
   }
+
+  Master.setWorkersNum(workersNum)
 
   val ip = AddrUtils.getAddr.getOrElse {
     println("Failed to get local IP address")
