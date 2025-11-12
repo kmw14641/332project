@@ -19,10 +19,22 @@ class ShuffleClient(implicit ec: ExecutionContext) {
     }.toMap
 
     var currentPoolSize = poolSize
-    var roundRobinIterator: Iterator[(String, String)] = Iterator.empty  // TODO: implement so that iterates receiverFileInfo in round robin
+    var roundRobinIterator: Iterator[(String, String)] = Iterator.empty  // should initialized once at start
 
 	def start(receiverFileInfo: Map[String, List[String]]): Future[Unit] = async {  // TODO: make input as optional, if none, restore
+        updateRoundRobinIterator(receiverFileInfo)
         await { expandRequestChain() }
+    }
+
+    // whenever move iterator, get filename from next worker's iterator, and circulate
+    private def updateRoundRobinIterator(receiverFileInfo: Map[String, List[String]]): Unit = {
+        roundRobinIterator = for {
+            iterators <- Iterator
+                .continually(receiverFileInfo.mapValues(_.iterator).toList)  // List((w1, it1), (w2, it2)) => List(((w1, it1), (w2, it2)), ((w1, it1), (w2, it2)), ...)
+                .takeWhile(_.exists { case (_, it) => it.hasNext })
+            (worker, iterator) <- iterators
+            if iterator.hasNext
+        } yield (worker, iterator.next())
     }
 
     // chain: after process file, it finds another file to process
