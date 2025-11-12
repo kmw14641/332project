@@ -42,9 +42,9 @@ class ShuffleClient(implicit ec: ExecutionContext) {
     private def expandRequestChain(): Future[Unit] = async {
         tryNextRequestWithPool() match {
             case None => ()  // end of current chain
-            case Some((worker, filename)) => {
+            case Some((workerIp, filename)) => {
                 val currentChain = async {
-                    await { processFile(worker, filename) }
+                    await { processFile(workerIp, filename) }
                     releasePool()
                     await { expandRequestChain() } // schedule after finishing current file
                 }
