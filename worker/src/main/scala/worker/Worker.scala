@@ -5,6 +5,7 @@ import com.google.protobuf.ByteString
 // Worker Singleton
 object Worker {
   val firstMergeDir: String = "/tmp/first_merge"
+  val shuffleDir: String = "/tmp/shuffle"
 
   private var masterIp: Option[String] = None
   private var masterPort: Option[Int] = None
