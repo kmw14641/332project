@@ -55,16 +55,16 @@ class ShuffleClient(implicit ec: ExecutionContext) {
         }
     }
 
-    private def processFile(worker: String, filename: String, retries: Int = 1): Future[Unit] = {
+    private def processFile(workerIp: String, filename: String, retries: Int = 1): Future[Unit] = {
         async {
-            val stub = Worker.synchronized(stubs(worker))
+            val stub = Worker.synchronized(stubs(workerIp))
             val bytes: DownloadResponse = await { stub.downloadFile(DownloadRequest(filename = filename)) }
             val targetPath = Paths.get(s"${Worker.shuffleDir}/$filename")
             val _ = blocking { Files.write(targetPath, bytes.data.toByteArray, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
         }.recoverWith {
             case _ if retries <= maxRetries => {
                 blocking { Thread.sleep(math.pow(2, retries).toLong) }
-                processFile(worker, filename, retries + 1)
+                processFile(workerIp, filename, retries + 1)
             }
         }
     }
