@@ -8,7 +8,7 @@ import shuffle.Shuffle.{ShuffleGrpc, DownloadRequest, DownloadResponse}
 import scala.async.Async.{async, await}
 
 class ShuffleClient(implicit ec: ExecutionContext) {
-    val maxRetries = 10
+    val maxTries = 10
     val poolSize = 50
 
     // TODO: make it global
@@ -55,16 +55,16 @@ class ShuffleClient(implicit ec: ExecutionContext) {
         }
     }
 
-    private def processFile(workerIp: String, filename: String, retries: Int = 1): Future[Unit] = {
+    private def processFile(workerIp: String, filename: String, tries: Int = 1): Future[Unit] = {
         async {
             val stub = Worker.synchronized(stubs(workerIp))
             val bytes: DownloadResponse = await { stub.downloadFile(DownloadRequest(filename = filename)) }
             val targetPath = Paths.get(s"${Worker.shuffleDir}/$filename")
             val _ = blocking { Files.write(targetPath, bytes.data.toByteArray, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
         }.recoverWith {
-            case _ if retries <= maxRetries => {
-                blocking { Thread.sleep(math.pow(2, retries).toLong) }
-                processFile(workerIp, filename, retries + 1)
+            case _ if tries <= maxTries => {
+                blocking { Thread.sleep(math.pow(2, tries).toLong) }
+                processFile(workerIp, filename, tries + 1)
             }
         }
     }
