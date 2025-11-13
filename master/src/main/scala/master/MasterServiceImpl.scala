@@ -24,6 +24,11 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
     val keys = request.keys
     val success = Master.addSamples(request.workerIp, keys)
 
+    // If all workers have sent samples, calculate ranges
+    if (Master.getSampleSize == Master.getWorkersNum && success) {
+      Master.calculateRanges()
+    }
+
 
     Future.successful(
       SampleResponse(success = success)
