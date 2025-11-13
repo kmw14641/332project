@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package worker;
+
+// Worker service for receiving range assignments
+service WorkerService {
+  // Master assigns a range to the worker
+  rpc AssignRanges (WorkersRangeAssignment) returns (AssignRangesResponse) {}
+}
+
+message WorkerNetworkInfo {
+  string ip = 1;
+  int32 port = 2;
+}
+
+// Range assignment sent from master to worker
+message RangeAssignment {
+  bytes start = 1;  // 10-byte key (inclusive)
+  bytes end = 2;    // 10-byte key (exclusive)
+}
+
+message WorkerRangeAssignment {
+  WorkerNetworkInfo worker = 1;
+  RangeAssignment range = 2;
+}
+
+message WorkersRangeAssignment {
+  repeated WorkerRangeAssignment assignments = 1;
+}
+
+// Response from worker after receiving range
+message AssignRangesResponse {
+  bool success = 1;
+}

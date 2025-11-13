@@ -2,7 +2,8 @@ import io.grpc.ServerBuilder
 import scala.concurrent.ExecutionContext
 import utils.{WorkerOptionUtils, PathUtils, SamplingUtils}
 import master.MasterClient
-import worker.Worker
+import worker.{Worker, WorkerServiceImpl}
+import worker.WorkerService.WorkerServiceGrpc
 import scala.concurrent.Future
 import common.utils.SystemUtils
 
@@ -35,6 +36,7 @@ object Main extends App {
 
   val server = ServerBuilder
     .forPort(0)
+    .addService(WorkerServiceGrpc.bindService(new WorkerServiceImpl(), ec))
     .build()
 
   server.start()
