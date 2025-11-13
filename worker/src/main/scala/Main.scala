@@ -1,8 +1,9 @@
 import io.grpc.ServerBuilder
 import scala.concurrent.ExecutionContext
-import utils.{WorkerOptionUtils, PathUtils}
+import utils.{WorkerOptionUtils, PathUtils, SamplingUtils}
 import master.MasterClient
 import worker.Worker
+import scala.concurrent.Future
 import common.utils.SystemUtils
 
 object Main extends App {
@@ -47,6 +48,28 @@ object Main extends App {
 
   val client = new MasterClient(masterIp, masterPort)
   client.registerWorker(workerIp, port, ramMb)
+
+  // Start sampling in a separate thread
+  val samplingPhase = Future {
+    try {
+      val samples = SamplingUtils.sampleFromInputs(inputDirs).getOrElse {
+        println("Warning: Sampling failed")
+        sys.exit(1)
+      }
+      
+      val success = client.sampling(workerIp, samples)
+      
+      if (success) {
+        println("Samples sent successfully. Waiting for range assignment...")
+      } else {
+        println("Failed to send samples to master")
+      }
+    } catch {
+      case e: Exception =>
+        println(s"Error during sampling: ${e.getMessage}")
+        e.printStackTrace()
+    }
+  }
 
   server.awaitTermination()
 }
