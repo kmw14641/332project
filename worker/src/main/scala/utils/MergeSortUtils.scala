@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import scala.jdk.CollectionConverters._
 import java.util.concurrent.{Executors, ConcurrentLinkedQueue}
+import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.{Future, ExecutionContext, Await}
 import scala.concurrent.duration._
 import common.utils.SystemUtils
@@ -63,18 +64,16 @@ object MergeSortUtils {
     
     // Create intermediate directory
     PathUtils.createDirectoryIfNotExists(intermediateDirPath)
-    val sortedDir = Paths.get(intermediateDirPath, "sorted")
-    PathUtils.createDirectoryIfNotExists(sortedDir.toString)
     
     val chunkSize = getChunkSize
     println(s"[MergeSort] Chunk size: $chunkSize records (${chunkSize * RECORD_SIZE / (1024 * 1024)} MB)")
     
     // Phase 1: In-memory sort and write to intermediate files
-    val sortedFiles = inMemorySort(inputDirs, sortedDir.toString, chunkSize)
+    val sortedFiles = inMemorySort(inputDirs, intermediateDirPath, chunkSize)
     println(s"[MergeSort] Phase 1 complete: Created ${sortedFiles.size} sorted files")
     
     // Phase 2: 2-way merge until one file remains
-    val finalOutputs = twoWayMergeSort(sortedFiles, sortedDir.toString)
+    val finalOutputs = twoWayMergeSort(sortedFiles, intermediateDirPath)
     println(s"[MergeSort] Phase 2 complete: ${finalOutputs.size} sorted files in order")
 
     finalOutputs
@@ -163,14 +162,18 @@ object MergeSortUtils {
    * Round 0: [[1],[2],[3],[4]]
    * Round 1: merge [1] and [3] -> [a,b], merge [2] and [4] -> [c,d]
    *          Result: [[a,b], [c,d]]
-   * Round 2: merge [a,b] and [c,d] at index 0 -> [e,f], at index 1 -> [g,h]
+   * Round 2: merge [a,b] and [c,d] sequentially:
+   *          - Start with files a and c
+   *          - If a is exhausted, continue with b and c
+   *          - If c is exhausted, continue with a (or b) and d
+   *          - Continue until all files are merged
    *          Result: [[e,f,g,h]]
    * After this round, files in [e,f,g,h] are guaranteed to be sorted in order
    */
   private def twoWayMergeSort(files: List[String], sortDir: String): List[String] = {
     // Initialize: each file is its own list
     var fileLists: List[List[String]] = files.map(f => List(f))
-    var nextFileId = files.size + 1
+    val nextFileId = new AtomicInteger(files.size + 1)
     
     // Calculate number of merge rounds needed
     val totalRounds = Math.ceil(Math.log(fileLists.size) / Math.log(2)).toInt
@@ -196,86 +199,28 @@ object MergeSortUtils {
         None
       }
       
-      // For each pair of lists, merge files at same indices
+      // For each pair of lists, merge all files sequentially
       val nextFileLists = new ConcurrentLinkedQueue[List[String]]()
       
-      val futures = listPairs.flatMap { case (list1, list2) =>
-        // Determine how many merge operations needed
-        val maxSize = Math.max(list1.size, list2.size)
-        
-        // Create a future for each individual merge operation
-        val mergeFutures = (0 until maxSize).map { i =>
-          Future {
-            val threadId = Thread.currentThread().getName
-            val file1Opt = list1.lift(i)
-            val file2Opt = list2.lift(i)
-            
-            val outputs = (file1Opt, file2Opt) match {
-              case (Some(file1), Some(file2)) =>
-                // Merge two files into two output files
-                val (output1Path, output2Path) = synchronized {
-                  val id1 = nextFileId
-                  val id2 = nextFileId + 1
-                  nextFileId += 2
-                  (s"$sortDir/$id1.bin", s"$sortDir/$id2.bin")
-                }
-                
-                val file1Size = Files.size(Paths.get(file1))
-                val file2Size = Files.size(Paths.get(file2))
-                println(s"[MergeSort-Merge][$threadId] Merging index $i: $file1 (${file1Size/RECORD_SIZE} rec) + $file2 (${file2Size/RECORD_SIZE} rec) -> $output1Path, $output2Path")
-                
-                mergeTwoFiles(file1, file2, output1Path, output2Path)
-                
-                // Delete input files after merge
-                Files.deleteIfExists(Paths.get(file1))
-                Files.deleteIfExists(Paths.get(file2))
-                
-                println(s"[MergeSort-Merge][$threadId] ✓ Completed merge index $i")
-                List(output1Path, output2Path)
-                
-              case (Some(file1), None) =>
-                // Only file from list1, just rename it
-                val outputPath = synchronized {
-                  val id = nextFileId
-                  nextFileId += 1
-                  s"$sortDir/$id.bin"
-                }
-                println(s"[MergeSort-Merge][$threadId] Renaming (no pair) index $i: $file1 -> $outputPath")
-                Files.move(Paths.get(file1), Paths.get(outputPath), 
-                  java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-                println(s"[MergeSort-Merge][$threadId] ✓ Completed rename index $i")
-                List(outputPath)
-                
-              case (None, Some(file2)) =>
-                // Only file from list2, just rename it
-                val outputPath = synchronized {
-                  val id = nextFileId
-                  nextFileId += 1
-                  s"$sortDir/$id.bin"
-                }
-                println(s"[MergeSort-Merge][$threadId] Renaming (no pair) index $i: $file2 -> $outputPath")
-                Files.move(Paths.get(file2), Paths.get(outputPath), 
-                  java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-                println(s"[MergeSort-Merge][$threadId] ✓ Completed rename index $i")
-                List(outputPath)
-                
-              case (None, None) =>
-                // Should not happen
-                throw new IllegalStateException("Both files are None")
-            }
-            
-            (i, outputs)
-          }
+      val futures = listPairs.toList.map { case (list1, list2) =>
+        Future {
+          val threadId = Thread.currentThread().getName
+          println(s"[MergeSort-Round$round][$threadId] Merging list pair: ${list1.size} files + ${list2.size} files")
+          
+          // Calculate average chunk size for output files
+          val totalSize = (list1 ++ list2).map(f => Files.size(Paths.get(f))).sum
+          val totalFiles = list1.size + list2.size
+          val avgChunkSize = (totalSize / totalFiles / RECORD_SIZE).toInt
+          
+          // Pre-allocate enough file IDs for this merge (estimate: total files)
+          val estimatedOutputFiles = Math.max(1, totalFiles)
+          val startFileId = nextFileId.getAndAdd(estimatedOutputFiles)
+          
+          val outputFiles = mergeFileLists(list1, list2, sortDir, startFileId, avgChunkSize, threadId, round)
+          
+          nextFileLists.add(outputFiles)
+          println(s"[MergeSort-Round$round][$threadId] Completed merge: ${outputFiles.size} output files")
         }
-        
-        // Wait for all merges for this pair and combine results
-        val pairFuture = Future.sequence(mergeFutures).map { indexedOutputs =>
-          // Sort by index to maintain order
-          val sortedOutputs = indexedOutputs.sortBy(_._1).flatMap(_._2).toList
-          nextFileLists.add(sortedOutputs)
-        }
-        
-        List(pairFuture)
       }
       
       try {
@@ -287,17 +232,15 @@ object MergeSortUtils {
       // Add remaining list if exists
       remainingList.foreach { list =>
         // Rename files in the remaining list
-        val renamedFiles = list.map { file =>
-          val outputPath = synchronized {
-            val id = nextFileId
-            nextFileId += 1
-            s"$sortDir/$id.bin"
-          }
+        val startId = nextFileId.getAndAdd(list.size)
+        val renamedFiles = list.zipWithIndex.map { case (file, idx) =>
+          val outputPath = s"$sortDir/${startId + idx}.bin"
           Files.move(Paths.get(file), Paths.get(outputPath), 
             java.nio.file.StandardCopyOption.REPLACE_EXISTING)
           outputPath
         }
         nextFileLists.add(renamedFiles)
+        println(s"[MergeSort] Renamed ${list.size} remaining files")
       }
       
       fileLists = nextFileLists.asScala.toList
@@ -305,6 +248,139 @@ object MergeSortUtils {
     
     // Flatten all lists to return single sorted list
     fileLists.flatten
+  }
+
+  /**
+   * Merge two lists of sorted files sequentially
+   * When one file is exhausted, continue with the next file from that list
+   */
+  private def mergeFileLists(
+    list1: List[String], 
+    list2: List[String], 
+    sortDir: String, 
+    startFileId: Int,
+    avgChunkSize: Int,
+    threadId: String,
+    round: Int
+  ): List[String] = {
+    val comparator = ByteString.unsignedLexicographicalComparator
+    val outputFiles = scala.collection.mutable.ListBuffer[String]()
+    
+    var fileId = startFileId
+    var idx1 = 0  // Current index in list1
+    var idx2 = 0  // Current index in list2
+    
+    var reader1: Option[FileReader] = None
+    var reader2: Option[FileReader] = None
+    var writer: Option[FileWriter] = None
+    
+    var current1: Option[(ByteString, ByteString)] = None
+    var current2: Option[(ByteString, ByteString)] = None
+    
+    var recordsWritten = 0
+    
+    // Helper function to open next file from list1
+    def openNextFile1(): Unit = {
+      reader1.foreach(_.close())
+      if (idx1 < list1.size) {
+        println(s"[MergeSort-Round$round][$threadId] Opening file from list1: ${list1(idx1)} (${idx1 + 1}/${list1.size})")
+        reader1 = Some(new FileReader(list1(idx1)))
+        current1 = reader1.get.readNext()
+        idx1 += 1
+      } else {
+        reader1 = None
+        current1 = None
+      }
+    }
+    
+    // Helper function to open next file from list2
+    def openNextFile2(): Unit = {
+      reader2.foreach(_.close())
+      if (idx2 < list2.size) {
+        println(s"[MergeSort-Round$round][$threadId] Opening file from list2: ${list2(idx2)} (${idx2 + 1}/${list2.size})")
+        reader2 = Some(new FileReader(list2(idx2)))
+        current2 = reader2.get.readNext()
+        idx2 += 1
+      } else {
+        reader2 = None
+        current2 = None
+      }
+    }
+    
+    // Helper function to create new output file
+    def createNewOutputFile(): Unit = {
+      writer.foreach(_.close())
+      val outputPath = s"$sortDir/$fileId.bin"
+      println(s"[MergeSort-Round$round][$threadId] Creating output file: $outputPath")
+      writer = Some(new FileWriter(outputPath))
+      outputFiles += outputPath
+      fileId += 1
+      recordsWritten = 0
+    }
+    
+    // Initialize first files and first output
+    openNextFile1()
+    openNextFile2()
+    createNewOutputFile()
+    
+    // Merge loop
+    while (current1.isDefined || current2.isDefined) {
+      // Check if we need to create a new output file
+      if (recordsWritten >= avgChunkSize && avgChunkSize > 0) {
+        createNewOutputFile()
+      }
+      
+      (current1, current2) match {
+        case (Some((key1, value1)), Some((key2, value2))) =>
+          // Both files have data, compare and write smaller
+          if (comparator.compare(key1, key2) <= 0) {
+            writer.get.write(key1, value1)
+            recordsWritten += 1
+            current1 = reader1.get.readNext()
+            if (current1.isEmpty) openNextFile1()
+          } else {
+            writer.get.write(key2, value2)
+            recordsWritten += 1
+            current2 = reader2.get.readNext()
+            if (current2.isEmpty) openNextFile2()
+          }
+        
+        case (Some((key1, value1)), None) =>
+          // Only list1 has data
+          writer.get.write(key1, value1)
+          recordsWritten += 1
+          current1 = reader1.get.readNext()
+          if (current1.isEmpty) openNextFile1()
+        
+        case (None, Some((key2, value2))) =>
+          // Only list2 has data
+          writer.get.write(key2, value2)
+          recordsWritten += 1
+          current2 = reader2.get.readNext()
+          if (current2.isEmpty) openNextFile2()
+        
+        case (None, None) =>
+          // Both exhausted, should not happen
+          throw new RuntimeException(s"[MergeSort-Round$round][$threadId] Error: Both file readers exhausted unexpectedly")
+      }
+    }
+    
+    // Clean up
+    reader1.foreach(_.close())
+    reader2.foreach(_.close())
+    writer.foreach(_.close())
+    
+    // Delete input files that were merged
+    (list1 ++ list2).foreach { file =>
+      try {
+        Files.deleteIfExists(Paths.get(file))
+        println(s"[MergeSort-Round$round][$threadId] Deleted intermediate file: $file")
+      } catch {
+        case e: Exception => println(s"[MergeSort-Round$round][$threadId] Warning: Failed to delete $file: ${e.getMessage}")
+      }
+    }
+    
+    outputFiles.toList
   }
 
   /**
@@ -337,13 +413,10 @@ object MergeSortUtils {
           keyBuffer.flip()
           valueBuffer.flip()
           
-          // Copy data to new arrays to avoid buffer reuse issues
-          val keyArray = new Array[Byte](KEY_SIZE)
-          val valueArray = new Array[Byte](VALUE_SIZE)
-          keyBuffer.get(keyArray)
-          valueBuffer.get(valueArray)
+          val key = ByteString.copyFrom(keyBuffer)
+          val value = ByteString.copyFrom(valueBuffer)
           
-          Some((ByteString.copyFrom(keyArray), ByteString.copyFrom(valueArray)))
+          Some((key, value))
         }
       } else {
         None
@@ -370,70 +443,19 @@ object MergeSortUtils {
       keyBuffer.clear()
       keyBuffer.put(key.toByteArray)
       keyBuffer.flip()
-      channel.write(keyBuffer)
+      while (keyBuffer.hasRemaining) {
+        channel.write(keyBuffer)
+      }
       
       valueBuffer.clear()
       valueBuffer.put(value.toByteArray)
       valueBuffer.flip()
-      channel.write(valueBuffer)
+      while (valueBuffer.hasRemaining) {
+        channel.write(valueBuffer)
+      }
     }
     
     def close(): Unit = channel.close()
-  }
-
-  /**
-   * Merge two sorted files into two output files of equal size
-   * Since both files are already sorted, we can read from top sequentially
-   */
-  private def mergeTwoFiles(file1Path: String, file2Path: String, output1Path: String, output2Path: String): Unit = {
-    val reader1 = new FileReader(file1Path)
-    val reader2 = new FileReader(file2Path)
-    val writer1 = new FileWriter(output1Path)
-    val writer2 = new FileWriter(output2Path)
-    
-    try {
-      val comparator = ByteString.unsignedLexicographicalComparator
-      val totalRecords = (Files.size(Paths.get(file1Path)) + Files.size(Paths.get(file2Path))) / RECORD_SIZE
-      val recordsPerFile = (totalRecords + 1) / 2
-      
-      // Merge recursively
-      @tailrec
-      def merge(record1: Option[(ByteString, ByteString)], 
-                record2: Option[(ByteString, ByteString)], 
-                recordsWritten: Long): Unit = {
-        (record1, record2) match {
-          case (None, None) => // Done
-          
-          case _ =>
-            val currentWriter = if (recordsWritten < recordsPerFile) writer1 else writer2
-            
-            val (keyToWrite, valueToWrite, nextRecord1, nextRecord2) = (record1, record2) match {
-              case (Some((k1, v1)), Some((k2, v2))) =>
-                if (comparator.compare(k1, k2) <= 0) {
-                  (k1, v1, reader1.readNext(), record2)
-                } else {
-                  (k2, v2, record1, reader2.readNext())
-                }
-              case (Some((k1, v1)), None) =>
-                (k1, v1, reader1.readNext(), None)
-              case (None, Some((k2, v2))) =>
-                (k2, v2, None, reader2.readNext())
-              case (None, None) =>
-                throw new IllegalStateException("Both records are None")
-            }
-            
-            currentWriter.write(keyToWrite, valueToWrite)
-            merge(nextRecord1, nextRecord2, recordsWritten + 1)
-        }
-      }
-      
-      merge(reader1.readNext(), reader2.readNext(), 0L)
-    } finally {
-      reader1.close()
-      reader2.close()
-      writer1.close()
-      writer2.close()
-    }
   }
 
   /**
@@ -447,8 +469,6 @@ object MergeSortUtils {
       val records = Array.ofDim[(ByteString, ByteString)](count)
       val keyBuffer = ByteBuffer.allocate(KEY_SIZE)
       val valueBuffer = ByteBuffer.allocate(VALUE_SIZE)
-      val keyArray = new Array[Byte](KEY_SIZE)
-      val valueArray = new Array[Byte](VALUE_SIZE)
       
       var position = offset * RECORD_SIZE
       var i = 0
@@ -467,11 +487,7 @@ object MergeSortUtils {
         keyBuffer.flip()
         valueBuffer.flip()
         
-        // Reuse arrays instead of creating new ones each iteration
-        keyBuffer.get(keyArray)
-        valueBuffer.get(valueArray)
-        
-        records(i) = (ByteString.copyFrom(keyArray), ByteString.copyFrom(valueArray))
+        records(i) = (ByteString.copyFrom(keyBuffer), ByteString.copyFrom(valueBuffer))
         position += RECORD_SIZE
         i += 1
       }
@@ -504,12 +520,16 @@ object MergeSortUtils {
         keyBuffer.clear()
         keyBuffer.put(key.toByteArray)
         keyBuffer.flip()
-        channel.write(keyBuffer)
+        while (keyBuffer.hasRemaining) {
+          channel.write(keyBuffer)
+        }
         
         valueBuffer.clear()
         valueBuffer.put(value.toByteArray)
         valueBuffer.flip()
-        channel.write(valueBuffer)
+        while (valueBuffer.hasRemaining) {
+          channel.write(valueBuffer)
+        }
         
         i += 1
       }
