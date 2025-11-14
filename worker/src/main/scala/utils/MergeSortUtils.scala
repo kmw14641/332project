@@ -202,7 +202,6 @@ object MergeSortUtils {
       val futures = listPairs.flatMap { case (list1, list2) =>
         // Determine how many merge operations needed
         val maxSize = Math.max(list1.size, list2.size)
-        val mergedFilesQueue = new ConcurrentLinkedQueue[String]()
         
         // Create a future for each individual merge operation
         val mergeFutures = (0 until maxSize).map { i =>
@@ -448,9 +447,12 @@ object MergeSortUtils {
       val records = Array.ofDim[(ByteString, ByteString)](count)
       val keyBuffer = ByteBuffer.allocate(KEY_SIZE)
       val valueBuffer = ByteBuffer.allocate(VALUE_SIZE)
+      val keyArray = new Array[Byte](KEY_SIZE)
+      val valueArray = new Array[Byte](VALUE_SIZE)
       
       var position = offset * RECORD_SIZE
-      for (i <- 0 until count) {
+      var i = 0
+      while (i < count) {
         keyBuffer.clear()
         valueBuffer.clear()
         
@@ -465,14 +467,13 @@ object MergeSortUtils {
         keyBuffer.flip()
         valueBuffer.flip()
         
-        // Copy data to new arrays
-        val keyArray = new Array[Byte](KEY_SIZE)
-        val valueArray = new Array[Byte](VALUE_SIZE)
+        // Reuse arrays instead of creating new ones each iteration
         keyBuffer.get(keyArray)
         valueBuffer.get(valueArray)
         
         records(i) = (ByteString.copyFrom(keyArray), ByteString.copyFrom(valueArray))
         position += RECORD_SIZE
+        i += 1
       }
       
       records
@@ -496,7 +497,10 @@ object MergeSortUtils {
       val keyBuffer = ByteBuffer.allocate(KEY_SIZE)
       val valueBuffer = ByteBuffer.allocate(VALUE_SIZE)
       
-      records.foreach { case (key, value) =>
+      var i = 0
+      while (i < records.length) {
+        val (key, value) = records(i)
+        
         keyBuffer.clear()
         keyBuffer.put(key.toByteArray)
         keyBuffer.flip()
@@ -506,6 +510,8 @@ object MergeSortUtils {
         valueBuffer.put(value.toByteArray)
         valueBuffer.flip()
         channel.write(valueBuffer)
+        
+        i += 1
       }
     } finally {
       channel.close()
