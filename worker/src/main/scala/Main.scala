@@ -80,11 +80,14 @@ object Main extends App {
   val intermediateDir = "/intermediate"
   PathUtils.createDirectoryIfNotExists(intermediateDir)
 
+  // Variable to store sorted files
+  var sortedFiles: List[String] = List.empty
+
   // Start merge sort in a separate thread
   val mergeSortPhase = Future {
     try {
       println("[MergeSort] Starting disk-based merge sort...")
-      MergeSortUtils.diskBasedMergeSort(inputDirs, intermediateDir)
+      sortedFiles = MergeSortUtils.diskBasedMergeSort(inputDirs, intermediateDir)
       println("[MergeSort] Disk-based merge sort completed successfully")
     } catch {
       case e: Exception =>
@@ -103,6 +106,64 @@ object Main extends App {
     case e: Exception =>
       println(s"Error waiting for phases to complete: ${e.getMessage}")
       e.printStackTrace()
+  }
+
+  // Debug: Validate sorted output using valsort
+  if (sortedFiles.nonEmpty) {
+    try {
+      println(s"[Validation] Merging ${sortedFiles.size} sorted files into single file for validation...")
+      
+      // Concatenate all sorted files into one
+      val validationFile = s"$intermediateDir/validation_output.bin"
+      val validationPath = java.nio.file.Paths.get(validationFile)
+      
+      // Create output file
+      val outputChannel = java.nio.channels.FileChannel.open(
+        validationPath,
+        java.nio.file.StandardOpenOption.CREATE,
+        java.nio.file.StandardOpenOption.WRITE,
+        java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
+      )
+      
+      try {
+        // Copy all sorted files in order
+        sortedFiles.foreach { filePath =>
+          val inputPath = java.nio.file.Paths.get(filePath)
+          val inputChannel = java.nio.channels.FileChannel.open(
+            inputPath,
+            java.nio.file.StandardOpenOption.READ
+          )
+          try {
+            inputChannel.transferTo(0, java.nio.file.Files.size(inputPath), outputChannel)
+          } finally {
+            inputChannel.close()
+          }
+        }
+      } finally {
+        outputChannel.close()
+      }
+      
+      println(s"[Validation] Created validation file: $validationFile")
+      println(s"[Validation] Running valsort validation...")
+      
+      // Run valsort command
+      import scala.sys.process._
+      val valsortResult = try {
+        val output = s"valsort $validationFile".!!
+        println(s"[Validation] valsort output:\n$output")
+        println("[Validation] ✓ Validation successful!")
+      } catch {
+        case e: Exception =>
+          println(s"[Validation] ✗ Validation failed: ${e.getMessage}")
+      }
+      
+    } catch {
+      case e: Exception =>
+        println(s"[Validation] Error during validation: ${e.getMessage}")
+        e.printStackTrace()
+    }
+  } else {
+    println("[Validation] No sorted files to validate")
   }
 
   server.awaitTermination()
