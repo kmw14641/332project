@@ -36,10 +36,12 @@ class ShuffleClient(implicit ec: ExecutionContext) {
 
     private def processFile(workerIp: String, filename: String, tries: Int = 1): Future[Unit] = {
         async {
+            println(s"[$workerIp, $filename] SEND")
             val stub = Worker.synchronized(stubs(workerIp))
             val bytes: DownloadResponse = await { stub.downloadFile(DownloadRequest(filename = filename)) }
             val targetPath = Paths.get(s"${Worker.shuffleDir}/$filename")
             val _ = blocking { Files.write(targetPath, bytes.data.toByteArray, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
+            println(s"[$workerIp, $filename] RECEIVE")
         }.recoverWith {
             case _ if tries <= maxTries => {
                 blocking { Thread.sleep(math.pow(2, tries).toLong) }
