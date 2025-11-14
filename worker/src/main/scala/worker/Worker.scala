@@ -7,7 +7,7 @@ object Worker {
   val mergeDir: String = "/tmp/merge"
   val shuffleDir: String = "/tmp/shuffle"
 
-  val maxGrpcMessageSize: Int = 100 * 1024 * 1024  // 100MB
+  val maxGrpcMessageSize: Int = 1024 * 1024 * 1024  // 1GB
 
   val diskIoLock = new Object()
 

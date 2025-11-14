@@ -12,7 +12,7 @@ import java.nio.ByteBuffer
 import io.grpc.stub.StreamObserver
 
 class ShuffleServiceImpl(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuffle {
-    val chunkSize = 1024 * 1024 * 1
+    val chunkSize = 1024 * 1024 * 180
 
 	override def downloadFile(request: DownloadRequest, responseObserver: StreamObserver[DownloadResponse]): Unit = {
         val sourcePath = Paths.get(s"${Worker.mergeDir}/${request.filename}")
