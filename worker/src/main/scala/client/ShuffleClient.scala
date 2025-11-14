@@ -13,7 +13,7 @@ class ShuffleClient(implicit ec: ExecutionContext) {
 
     // TODO: make it global
     val stubs = Worker.getAssignedRange.get.keys.map { case (ip, port) =>
-        val channel = io.grpc.ManagedChannelBuilder.forAddress(ip, port).usePlaintext().build()
+        val channel = io.grpc.ManagedChannelBuilder.forAddress(ip, port).maxInboundMessageSize(Worker.maxGrpcMessageSize).usePlaintext().build()
         val stub = ShuffleGrpc.stub(channel)
         (ip, stub)
     }.toMap

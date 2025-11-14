@@ -36,6 +36,7 @@ object Main extends App {
 
   val server = ServerBuilder
     .forPort(0)
+    .maxInboundMessageSize(Worker.maxGrpcMessageSize)
     .addService(WorkerServiceGrpc.bindService(new WorkerServiceImpl(), ec))
     .build()
 
