@@ -44,7 +44,7 @@ object MergeSortUtils {
    * Calculate optimal thread count based on CPU cores and RAM constraints
    */
   def getThreadCount: Int = {
-    val cpuThreads = Runtime.getRuntime.availableProcessors() * 2
+    val cpuThreads = SystemUtils.getProcessorNum * 2
     val maxConcurrentFiles = getMaxConcurrentFiles
     // Each merge task needs 3 files (2 input + 1 output)
     val ramBasedThreads = maxConcurrentFiles / 3
