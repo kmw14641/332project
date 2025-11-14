@@ -10,4 +10,6 @@ object SystemUtils {
     val maxMemory = runtime.maxMemory()
     maxMemory / (1024 * 1024)
   }
+
+  def getProcessorNum: Int = Runtime.getRuntime.availableProcessors()
 }

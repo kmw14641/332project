@@ -76,7 +76,7 @@ object Master {
       rangeBuffer.append((previousKey, key))
       previousKey = key
     }
-    rangeBuffer.append((previousKey, ByteString.copyFrom(Array.fill[Byte](1)(1) ++ Array.fill[Byte](10)(0))))  // Last range to infinity
+    rangeBuffer.append((previousKey, ByteString.copyFrom(Array.fill[Byte](11)(255.toByte))))  // Last range to infinity
 
     ranges = workers.zip(rangeBuffer).map {
       case ((ip, port), (start, end)) => ((ip, port) -> (start, end))
