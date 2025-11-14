@@ -14,7 +14,7 @@ import io.grpc.stub.StreamObserver
 class ShuffleServiceImpl(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuffle {
 	override def downloadFile(request: DownloadRequest, responseObserver: StreamObserver[DownloadResponse]): Unit = {
         val sourcePath = Paths.get(s"${Worker.mergeDir}/${request.filename}")
-        val chunkSize = 1024 * 1024 * 1
+        val chunkSize = 1024 * 1024 * 180
 
         Using(FileChannel.open(sourcePath, StandardOpenOption.READ)) { channel =>
             val buffer = ByteBuffer.allocateDirect(chunkSize)
