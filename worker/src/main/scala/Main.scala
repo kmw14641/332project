@@ -61,18 +61,42 @@ object Main extends App {
 
   println("Starting shuffle client...")
 
-  val mockAssignedRange = Map(
-    ("2.2.2.101", 8080) -> (ByteString.EMPTY, ByteString.EMPTY),
-    ("2.2.2.102", 8080) -> (ByteString.EMPTY, ByteString.EMPTY),
-    ("2.2.2.103", 8080) -> (ByteString.EMPTY, ByteString.EMPTY),
-  )
+  val mockAssignedRange = (101 to 110).map { i =>
+    (s"2.2.2.$i", 8080) -> (ByteString.EMPTY, ByteString.EMPTY)
+  }.toMap
   Worker.setAssignedRange(mockAssignedRange)
 
+  val (s, e) = SystemUtils.getLocalIp.getOrElse("") match {
+    case "2.2.2.101" => (1, 50)
+    case "2.2.2.102" => (51, 100)
+    case "2.2.2.103" => (101, 150)
+    case "2.2.2.104" => (151, 200)
+    case "2.2.2.105" => (201, 250)
+    case "2.2.2.106" => (251, 300)
+    case "2.2.2.107" => (301, 350)
+    case "2.2.2.108" => (351, 400)
+    case "2.2.2.109" => (401, 450)
+    case "2.2.2.110" => (451, 500)
+    case _ => (0, 0) // default case for safety, but should never happen if IPs are as expected
+  }
+
+  // 공통 파티션 리스트
+  val partitions = (s to e).map(i => s"partition.$i").toList
+
   val mockReceiverFileInfo = Map(
-    "2.2.2.101" -> (1 to 320).map(i => s"partition.$i").toList,
-    "2.2.2.102" -> (1 to 320).map(i => s"partition.$i").toList,
-    "2.2.2.103" -> (1 to 320).map(i => s"partition.$i").toList,
+    "2.2.2.101" -> partitions,
+    "2.2.2.102" -> partitions,
+    "2.2.2.103" -> partitions,
+    "2.2.2.104" -> partitions,
+    "2.2.2.105" -> partitions,
+    "2.2.2.106" -> partitions,
+    "2.2.2.107" -> partitions,
+    "2.2.2.108" -> partitions,
+    "2.2.2.109" -> partitions,
+    "2.2.2.110" -> partitions
   )
+
+
   val start = System.nanoTime()
 
   // if (SystemUtils.getLocalIp.getOrElse("") == "2.2.2.101")

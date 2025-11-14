@@ -4,8 +4,8 @@ import com.google.protobuf.ByteString
 
 // Worker Singleton
 object Worker {
-  val mergeDir: String = "/data1/input"
-  val shuffleDir: String = "/tmp/shuffle"
+  val mergeDir: String = "shuffle_test_input"
+  val shuffleDir: String = "shuffle_test_output"
 
   private var masterIp: Option[String] = None
   private var masterPort: Option[Int] = None
