@@ -103,17 +103,25 @@ object MergeSortUtils {
     var fileId = 0
     val futures = allFiles.map { filePath =>
       Future {
+        val threadId = Thread.currentThread().getName
         val file = Paths.get(filePath)
         val fileSize = Files.size(file)
         val numRecords = fileSize / RECORD_SIZE
         val comparator = ByteString.unsignedLexicographicalComparator
         
+        println(s"[MergeSort-InMemory][$threadId] Processing file: $filePath (${numRecords} records)")
+        
         var offset = 0L
+        var chunkCount = 0
         while (offset < numRecords) {
+          chunkCount += 1
           val recordsToRead = Math.min(chunkSize, numRecords - offset).toInt
+          println(s"[MergeSort-InMemory][$threadId] Reading chunk $chunkCount: $recordsToRead records from offset $offset")
+          
           val records = readRecords(filePath, offset, recordsToRead)
           
           // Sort records in memory by key
+          println(s"[MergeSort-InMemory][$threadId] Sorting chunk $chunkCount...")
           val sortedRecords = records.sortWith((a, b) => comparator.compare(a._1, b._1) < 0)
           
           // Write sorted chunk to file
@@ -121,11 +129,14 @@ object MergeSortUtils {
             fileId += 1
             s"$sortDir/$fileId.bin"
           }
+          println(s"[MergeSort-InMemory][$threadId] Writing sorted chunk to: $outputPath")
           writeRecords(outputPath, sortedRecords)
           sortedFiles.add(outputPath)
           
           offset += recordsToRead
         }
+        
+        println(s"[MergeSort-InMemory][$threadId] ✓ Completed file: $filePath ($chunkCount chunks)")
       }
     }
     
@@ -193,6 +204,7 @@ object MergeSortUtils {
         // Create a future for each individual merge operation
         val mergeFutures = (0 until maxSize).map { i =>
           Future {
+            val threadId = Thread.currentThread().getName
             val file1Opt = list1.lift(i)
             val file2Opt = list2.lift(i)
             
@@ -206,12 +218,17 @@ object MergeSortUtils {
                   (s"$sortDir/$id1.bin", s"$sortDir/$id2.bin")
                 }
                 
+                val file1Size = Files.size(Paths.get(file1))
+                val file2Size = Files.size(Paths.get(file2))
+                println(s"[MergeSort-Merge][$threadId] Merging index $i: $file1 (${file1Size/RECORD_SIZE} rec) + $file2 (${file2Size/RECORD_SIZE} rec) -> $output1Path, $output2Path")
+                
                 mergeTwoFiles(file1, file2, output1Path, output2Path)
                 
                 // Delete input files after merge
                 Files.deleteIfExists(Paths.get(file1))
                 Files.deleteIfExists(Paths.get(file2))
                 
+                println(s"[MergeSort-Merge][$threadId] ✓ Completed merge index $i")
                 List(output1Path, output2Path)
                 
               case (Some(file1), None) =>
@@ -221,8 +238,10 @@ object MergeSortUtils {
                   nextFileId += 1
                   s"$sortDir/$id.bin"
                 }
+                println(s"[MergeSort-Merge][$threadId] Renaming (no pair) index $i: $file1 -> $outputPath")
                 Files.move(Paths.get(file1), Paths.get(outputPath), 
                   java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                println(s"[MergeSort-Merge][$threadId] ✓ Completed rename index $i")
                 List(outputPath)
                 
               case (None, Some(file2)) =>
@@ -232,8 +251,10 @@ object MergeSortUtils {
                   nextFileId += 1
                   s"$sortDir/$id.bin"
                 }
+                println(s"[MergeSort-Merge][$threadId] Renaming (no pair) index $i: $file2 -> $outputPath")
                 Files.move(Paths.get(file2), Paths.get(outputPath), 
                   java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                println(s"[MergeSort-Merge][$threadId] ✓ Completed rename index $i")
                 List(outputPath)
                 
               case (None, None) =>
@@ -301,11 +322,27 @@ object MergeSortUtils {
         keyBuffer.clear()
         valueBuffer.clear()
         
-        channel.read(keyBuffer, position)
-        channel.read(valueBuffer, position + KEY_SIZE)
+        val keyBytesRead = channel.read(keyBuffer, position)
+        val valueBytesRead = channel.read(valueBuffer, position + KEY_SIZE)
         
-        position += RECORD_SIZE
-        Some((ByteString.copyFrom(keyBuffer.array()), ByteString.copyFrom(valueBuffer.array())))
+        if (keyBytesRead != KEY_SIZE || valueBytesRead != VALUE_SIZE) {
+          println(s"[FileReader] Warning: Incomplete read at position $position in $path (key: $keyBytesRead/$KEY_SIZE, value: $valueBytesRead/$VALUE_SIZE)")
+          None
+        } else {
+          position += RECORD_SIZE
+          
+          // Flip buffers to read from beginning
+          keyBuffer.flip()
+          valueBuffer.flip()
+          
+          // Copy data to new arrays to avoid buffer reuse issues
+          val keyArray = new Array[Byte](KEY_SIZE)
+          val valueArray = new Array[Byte](VALUE_SIZE)
+          keyBuffer.get(keyArray)
+          valueBuffer.get(valueArray)
+          
+          Some((ByteString.copyFrom(keyArray), ByteString.copyFrom(valueArray)))
+        }
       } else {
         None
       }
@@ -419,10 +456,24 @@ object MergeSortUtils {
         keyBuffer.clear()
         valueBuffer.clear()
         
-        channel.read(keyBuffer, position)
-        channel.read(valueBuffer, position + KEY_SIZE)
+        val keyBytesRead = channel.read(keyBuffer, position)
+        val valueBytesRead = channel.read(valueBuffer, position + KEY_SIZE)
         
-        records(i) = (ByteString.copyFrom(keyBuffer.array()), ByteString.copyFrom(valueBuffer.array()))
+        if (keyBytesRead != KEY_SIZE || valueBytesRead != VALUE_SIZE) {
+          throw new RuntimeException(s"Incomplete read at position $position in $filePath (key: $keyBytesRead/$KEY_SIZE, value: $valueBytesRead/$VALUE_SIZE)")
+        }
+        
+        // Flip buffers to read from beginning
+        keyBuffer.flip()
+        valueBuffer.flip()
+        
+        // Copy data to new arrays
+        val keyArray = new Array[Byte](KEY_SIZE)
+        val valueArray = new Array[Byte](VALUE_SIZE)
+        keyBuffer.get(keyArray)
+        valueBuffer.get(valueArray)
+        
+        records(i) = (ByteString.copyFrom(keyArray), ByteString.copyFrom(valueArray))
         position += RECORD_SIZE
       }
       
