@@ -6,6 +6,7 @@ import worker.Worker
 import io.grpc.ManagedChannelBuilder
 import shuffle.Shuffle.{ShuffleGrpc, DownloadRequest, DownloadResponse}
 import scala.async.Async.{async, await}
+import utils.PathUtils
 
 class ShuffleClient(implicit ec: ExecutionContext) {
     // TODO: make it global
@@ -14,6 +15,24 @@ class ShuffleClient(implicit ec: ExecutionContext) {
         val stub = ShuffleGrpc.stub(channel)
         (ip, stub)
     }.toMap
+    
+	def start(receiverFileInfo: Map[String, List[String]]): Future[Unit] = async {  // TODO: make input as optional, if none, restore
+        PathUtils.createDirectoryIfNotExists(Worker.shuffleDir)
+        val workerFutures = receiverFileInfo.map {
+            case (workerIp, fileList) => processFilesSequentially(workerIp, fileList)
+        }
+        await { Future.sequence(workerFutures) }
+    }
+
+    private def processFilesSequentially(workerIp: String, fileList: List[String]): Future[Unit] = async {
+        fileList match {
+            case Nil => Future.successful()
+            case head :: tail => {
+                await { processFile(workerIp, head) }
+                await { processFilesSequentially(workerIp, tail) }
+            }
+        }
+    }
 
     private def processFile(workerIp: String, filename: String): Future[Unit] = async {
         println(s"[$workerIp, $filename] SEND")
