@@ -9,6 +9,7 @@ import scala.concurrent.{Future, ExecutionContext, Await}
 import scala.concurrent.duration._
 import common.utils.SystemUtils
 import com.google.protobuf.ByteString
+import scala.annotation.tailrec
 
 object MergeSortUtils {
   val RECORD_SIZE = 100  // 10 bytes key + 90 bytes value
@@ -111,32 +112,34 @@ object MergeSortUtils {
         
         println(s"[MergeSort-InMemory][$threadId] Processing file: $filePath (${numRecords} records)")
         
-        var offset = 0L
-        var chunkCount = 0
-        while (offset < numRecords) {
-          chunkCount += 1
-          val recordsToRead = Math.min(chunkSize, numRecords - offset).toInt
-          println(s"[MergeSort-InMemory][$threadId] Reading chunk $chunkCount: $recordsToRead records from offset $offset")
-          
-          val records = readRecords(filePath, offset, recordsToRead)
-          
-          // Sort records in memory by key
-          println(s"[MergeSort-InMemory][$threadId] Sorting chunk $chunkCount...")
-          val sortedRecords = records.sortWith((a, b) => comparator.compare(a._1, b._1) < 0)
-          
-          // Write sorted chunk to file
-          val outputPath = synchronized {
-            fileId += 1
-            s"$sortDir/$fileId.bin"
+        // Process chunks recursively
+        @tailrec
+        def processChunks(offset: Long, chunkCount: Int): Unit = {
+          if (offset < numRecords) {
+            val recordsToRead = Math.min(chunkSize, numRecords - offset).toInt
+            val currentChunk = chunkCount + 1
+            
+            println(s"[MergeSort-InMemory][$threadId] Reading chunk $currentChunk: $recordsToRead records from offset $offset")
+            val records = readRecords(filePath, offset, recordsToRead)
+            
+            println(s"[MergeSort-InMemory][$threadId] Sorting chunk $currentChunk...")
+            val sortedRecords = records.sortWith((a, b) => comparator.compare(a._1, b._1) < 0)
+            
+            val outputPath = synchronized {
+              fileId += 1
+              s"$sortDir/$fileId.bin"
+            }
+            println(s"[MergeSort-InMemory][$threadId] Writing sorted chunk to: $outputPath")
+            writeRecords(outputPath, sortedRecords)
+            sortedFiles.add(outputPath)
+            
+            processChunks(offset + recordsToRead, currentChunk)
+          } else {
+            println(s"[MergeSort-InMemory][$threadId] ✓ Completed file: $filePath ($chunkCount chunks)")
           }
-          println(s"[MergeSort-InMemory][$threadId] Writing sorted chunk to: $outputPath")
-          writeRecords(outputPath, sortedRecords)
-          sortedFiles.add(outputPath)
-          
-          offset += recordsToRead
         }
         
-        println(s"[MergeSort-InMemory][$threadId] ✓ Completed file: $filePath ($chunkCount chunks)")
+        processChunks(0L, 0)
       }
     }
     
@@ -391,46 +394,41 @@ object MergeSortUtils {
     
     try {
       val comparator = ByteString.unsignedLexicographicalComparator
-      
-      // Calculate total records and split point
       val totalRecords = (Files.size(Paths.get(file1Path)) + Files.size(Paths.get(file2Path))) / RECORD_SIZE
-      val recordsPerFile = (totalRecords + 1) / 2  // Split evenly
+      val recordsPerFile = (totalRecords + 1) / 2
       
-      var record1 = reader1.readNext()
-      var record2 = reader2.readNext()
-      var recordsWritten = 0L
-      var currentWriter = writer1
-      
-      // Merge two sorted streams
-      while (record1.isDefined || record2.isDefined) {
-        // Switch to second writer at midpoint
-        if (recordsWritten == recordsPerFile) {
-          currentWriter = writer2
-        }
-        
-        val (keyToWrite, valueToWrite) = (record1, record2) match {
-          case (Some((k1, v1)), Some((k2, v2))) =>
-            // Compare keys
-            if (comparator.compare(k1, k2) <= 0) {
-              record1 = reader1.readNext()
-              (k1, v1)
-            } else {
-              record2 = reader2.readNext()
-              (k2, v2)
+      // Merge recursively
+      @tailrec
+      def merge(record1: Option[(ByteString, ByteString)], 
+                record2: Option[(ByteString, ByteString)], 
+                recordsWritten: Long): Unit = {
+        (record1, record2) match {
+          case (None, None) => // Done
+          
+          case _ =>
+            val currentWriter = if (recordsWritten < recordsPerFile) writer1 else writer2
+            
+            val (keyToWrite, valueToWrite, nextRecord1, nextRecord2) = (record1, record2) match {
+              case (Some((k1, v1)), Some((k2, v2))) =>
+                if (comparator.compare(k1, k2) <= 0) {
+                  (k1, v1, reader1.readNext(), record2)
+                } else {
+                  (k2, v2, record1, reader2.readNext())
+                }
+              case (Some((k1, v1)), None) =>
+                (k1, v1, reader1.readNext(), None)
+              case (None, Some((k2, v2))) =>
+                (k2, v2, None, reader2.readNext())
+              case (None, None) =>
+                throw new IllegalStateException("Both records are None")
             }
-          case (Some((k1, v1)), None) =>
-            record1 = reader1.readNext()
-            (k1, v1)
-          case (None, Some((k2, v2))) =>
-            record2 = reader2.readNext()
-            (k2, v2)
-          case (None, None) =>
-            throw new IllegalStateException("Both records are None")
+            
+            currentWriter.write(keyToWrite, valueToWrite)
+            merge(nextRecord1, nextRecord2, recordsWritten + 1)
         }
-        
-        currentWriter.write(keyToWrite, valueToWrite)
-        recordsWritten += 1
       }
+      
+      merge(reader1.readNext(), reader2.readNext(), 0L)
     } finally {
       reader1.close()
       reader2.close()
