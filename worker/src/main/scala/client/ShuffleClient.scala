@@ -1,12 +1,14 @@
 package client
 
 import java.nio.file.{Files, Paths, StandardOpenOption}
-import scala.concurrent.{ExecutionContext, Future, blocking}
+import scala.concurrent.{ExecutionContext, Future, blocking, Promise}
 import worker.Worker
 import io.grpc.ManagedChannelBuilder
 import shuffle.Shuffle.{ShuffleGrpc, DownloadRequest, DownloadResponse}
 import scala.async.Async.{async, await}
 import utils.PathUtils
+import io.grpc.stub.StreamObserver
+import java.nio.channels.FileChannel
 
 class ShuffleClient(implicit ec: ExecutionContext) {
     val maxTries = 10
@@ -36,13 +38,34 @@ class ShuffleClient(implicit ec: ExecutionContext) {
         }
     }
 
-    private def processFile(workerIp: String, filename: String): Future[Unit] = async {
-        println(s"[$workerIp, $filename] SEND")
+    private def processFile(workerIp: String, filename: String, tries: Int = 1): Future[Unit] = {
+        val promise = Promise[Unit]()
+
         val stub = Worker.synchronized(stubs(workerIp))
-        val bytes: DownloadResponse = await { stub.downloadFile(DownloadRequest(filename = filename)) }
         val targetPath = Paths.get(s"${Worker.shuffleDir}/$filename")
-        val _ = blocking { Files.write(targetPath, bytes.data.toByteArray, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
-        println(s"[$workerIp, $filename] RECEIVE")
+        val fileChannel: FileChannel = FileChannel.open(
+            targetPath,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.WRITE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        )
+        
+        println(s"[$workerIp, $filename] request")
+        stub.downloadFile(DownloadRequest(filename = filename), new StreamObserver[DownloadResponse] {
+            override def onNext(response: DownloadResponse): Unit = {
+                blocking { fileChannel.write(response.data.asReadOnlyByteBuffer()) }
+            }
+
+            override def onError(t: Throwable): Unit = promise.failure(t)
+            
+            override def onCompleted(): Unit = {
+                println(s"[$workerIp, $filename] response completed")
+                fileChannel.close()
+                promise.success(())
+            }
+        })
+
+        promise.future
     }
 
     private def processFileWithRetry(workerIp: String, filename: String, tries: Int = 1): Future[Unit] = {
