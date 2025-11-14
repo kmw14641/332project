@@ -3,7 +3,7 @@ syntax = "proto3";
 package shuffle;
 
 service Shuffle {
-	rpc DownloadFile(DownloadRequest) returns (DownloadResponse);
+	rpc DownloadFile(DownloadRequest) returns (stream DownloadResponse);
 }
 
 message DownloadRequest {
