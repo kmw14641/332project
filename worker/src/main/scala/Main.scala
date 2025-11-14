@@ -66,19 +66,19 @@ object Main extends App {
   }.toMap
   Worker.setAssignedRange(mockAssignedRange)
 
-  val (s, e) = SystemUtils.getLocalIp.getOrElse("") match {
-    case "2.2.2.101" => (1, 50)
-    case "2.2.2.102" => (51, 100)
-    case "2.2.2.103" => (101, 150)
-    case "2.2.2.104" => (151, 200)
-    case "2.2.2.105" => (201, 250)
-    case "2.2.2.106" => (251, 300)
-    case "2.2.2.107" => (301, 350)
-    case "2.2.2.108" => (351, 400)
-    case "2.2.2.109" => (401, 450)
-    case "2.2.2.110" => (451, 500)
-    case _ => (0, 0) // default case for safety, but should never happen if IPs are as expected
-  }
+val (s, e) = SystemUtils.getLocalIp.getOrElse("") match {
+  case "2.2.2.101" => (1, 10)
+  case "2.2.2.102" => (11, 20)
+  case "2.2.2.103" => (21, 30)
+  case "2.2.2.104" => (31, 40)
+  case "2.2.2.105" => (41, 50)
+  case "2.2.2.106" => (51, 60)
+  case "2.2.2.107" => (61, 70)
+  case "2.2.2.108" => (71, 80)
+  case "2.2.2.109" => (81, 90)
+  case "2.2.2.110" => (91, 100)
+  case _ => (0, 0) // default case for safety, but should never happen if IPs are as expected
+}
 
   // 공통 파티션 리스트
   val partitions = (s to e).map(i => s"partition.$i").toList
