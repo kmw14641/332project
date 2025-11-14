@@ -26,7 +26,9 @@ class ShuffleServiceImpl(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuf
                 // TODO: onNext는 queue에 파일을 쌓아놓고 바로 return함. 흐름 제어 필요.
                 responseObserver.onNext(DownloadResponse(data = ByteString.copyFrom(buffer)))
                 buffer.clear()
-                bytesRead = channel.read(buffer)
+                Worker.diskIoLock.synchronized {
+                    bytesRead = channel.read(buffer)
+                }
             }
 
             responseObserver.onCompleted()

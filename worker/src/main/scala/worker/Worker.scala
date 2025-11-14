@@ -9,6 +9,8 @@ object Worker {
 
   val maxGrpcMessageSize: Int = 100 * 1024 * 1024  // 100MB
 
+  val diskIoLock = new Object()
+
   private var masterIp: Option[String] = None
   private var masterPort: Option[Int] = None
   private var inputDirs: Seq[String] = Nil

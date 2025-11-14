@@ -53,7 +53,9 @@ class ShuffleClient(implicit ec: ExecutionContext) {
         println(s"[$workerIp, $filename] request")
         stub.downloadFile(DownloadRequest(filename = filename), new StreamObserver[DownloadResponse] {
             override def onNext(response: DownloadResponse): Unit = {
-                blocking { fileChannel.write(response.data.asReadOnlyByteBuffer()) }
+                Worker.diskIoLock.synchronized {
+                    blocking { fileChannel.write(response.data.asReadOnlyByteBuffer()) }
+                }
             }
 
             override def onError(t: Throwable): Unit = promise.failure(t)
