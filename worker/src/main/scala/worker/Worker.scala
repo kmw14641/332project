@@ -7,6 +7,8 @@ object Worker {
   val mergeDir: String = "shuffle_test_input"
   val shuffleDir: String = "shuffle_test_output"
 
+  val diskIoLock = new Object()
+
   private var masterIp: Option[String] = None
   private var masterPort: Option[Int] = None
   private var inputDirs: Seq[String] = Nil

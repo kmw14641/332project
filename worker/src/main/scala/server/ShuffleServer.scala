@@ -24,7 +24,9 @@ class ShuffleServiceImpl(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuf
                 buffer.flip()  // 읽기 모드로 전환 (channel이 buffer의 끝에 seek해놓은 상태임)
                 responseObserver.onNext(DownloadResponse(data = ByteString.copyFrom(buffer)))
                 buffer.clear()
-                bytesRead = channel.read(buffer)
+                Worker.diskIoLock.synchronized {
+                    bytesRead = channel.read(buffer)
+                }
             }
 
             responseObserver.onCompleted()
