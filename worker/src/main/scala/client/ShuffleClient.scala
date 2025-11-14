@@ -6,6 +6,7 @@ import worker.Worker
 import io.grpc.ManagedChannelBuilder
 import shuffle.Shuffle.{ShuffleGrpc, DownloadRequest, DownloadResponse}
 import scala.async.Async.{async, await}
+import utils.PathUtils.createDirectoryIfNotExists
 
 class ShuffleClient(implicit ec: ExecutionContext) {
     val maxTries = 10
@@ -18,6 +19,7 @@ class ShuffleClient(implicit ec: ExecutionContext) {
     }.toMap
     
 	def start(receiverFileInfo: Map[String, List[String]]): Future[Unit] = async {  // TODO: make input as optional, if none, restore
+        createDirectoryIfNotExists(Worker.shuffleDir)
         val workerFutures = receiverFileInfo.map { case (workerIp, fileList) => processFilesSequentially(workerIp, fileList) }
         await { Future.sequence(workerFutures) }
     }
