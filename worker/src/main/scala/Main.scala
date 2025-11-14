@@ -1,11 +1,12 @@
 import io.grpc.ServerBuilder
 import scala.concurrent.{ExecutionContext, Future, Await, Promise}
 import scala.concurrent.duration._
-import utils.{WorkerOptionUtils, PathUtils, SamplingUtils, MergeSortUtils}
+import utils.{WorkerOptionUtils, PathUtils, SamplingUtils, MergeSortUtils, FileAssignmentUtils}
 import master.MasterClient
 import worker.{Worker, WorkerServiceImpl}
 import worker.WorkerService.WorkerServiceGrpc
 import common.utils.SystemUtils
+import com.google.protobuf.ByteString
 
 object Main extends App {
   implicit val ec: ExecutionContext = ExecutionContext.global
@@ -108,62 +109,22 @@ object Main extends App {
       e.printStackTrace()
   }
 
-  // Debug: Validate sorted output using valsort
-  if (sortedFiles.nonEmpty) {
-    try {
-      println(s"[Validation] Merging ${sortedFiles.size} sorted files into single file for validation...")
-      
-      // Concatenate all sorted files into one
-      val validationFile = s"$intermediateDir/validation_output.bin"
-      val validationPath = java.nio.file.Paths.get(validationFile)
-      
-      // Create output file
-      val outputChannel = java.nio.channels.FileChannel.open(
-        validationPath,
-        java.nio.file.StandardOpenOption.CREATE,
-        java.nio.file.StandardOpenOption.WRITE,
-        java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
-      )
-      
+  // Now assign files to workers based on assigned ranges
+  Worker.getAssignedRange match {
+    case Some(assignedRange) =>
       try {
-        // Copy all sorted files in order
-        sortedFiles.foreach { filePath =>
-          val inputPath = java.nio.file.Paths.get(filePath)
-          val inputChannel = java.nio.channels.FileChannel.open(
-            inputPath,
-            java.nio.file.StandardOpenOption.READ
-          )
-          try {
-            inputChannel.transferTo(0, java.nio.file.Files.size(inputPath), outputChannel)
-          } finally {
-            inputChannel.close()
-          }
-        }
-      } finally {
-        outputChannel.close()
-      }
-      
-      println(s"[Validation] Created validation file: $validationFile")
-      println(s"[Validation] Running valsort validation...")
-      
-      // Run valsort command
-      import scala.sys.process._
-      val valsortResult = try {
-        val output = s"valsort $validationFile".!!
-        println(s"[Validation] valsort output:\n$output")
-        println("[Validation] ✓ Validation successful!")
+        println("[FileAssignment] Starting file assignment based on assigned ranges...")
+        
+        val assignedFiles = FileAssignmentUtils.assignFilesToWorkers(sortedFiles, assignedRange, "/final")
+        
+        println(s"[FileAssignment] File assignment completed: ${assignedFiles.values.map(_.size).sum} files created")
       } catch {
         case e: Exception =>
-          println(s"[Validation] ✗ Validation failed: ${e.getMessage}")
+          println(s"[FileAssignment] Error during file assignment: ${e.getMessage}")
+          e.printStackTrace()
       }
-      
-    } catch {
-      case e: Exception =>
-        println(s"[Validation] Error during validation: ${e.getMessage}")
-        e.printStackTrace()
-    }
-  } else {
-    println("[Validation] No sorted files to validate")
+    case None =>
+      println("[FileAssignment] Warning: No assigned range available, skipping file assignment")
   }
 
   server.awaitTermination()
