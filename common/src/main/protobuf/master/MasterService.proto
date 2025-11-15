@@ -9,6 +9,9 @@ service MasterService {
   
   // Worker sends sampled keys to master
   rpc Sampling (SampleData) returns (SampleResponse) {}
+
+  // Worker reports that synchronization phase is completed
+  rpc ReportSyncCompletion (SyncPhaseReport) returns (SyncPhaseAck) {}
 }
 
 // Worker information sent during registration
@@ -32,4 +35,14 @@ message SampleData {
 // Response from master after receiving samples
 message SampleResponse {
   bool success = 1;
+}
+
+// Report message for synchronization phase completion
+message SyncPhaseReport {
+  string worker_ip = 1;
+}
+
+message SyncPhaseAck {
+  bool success = 1;
+  string message = 2;
 }
