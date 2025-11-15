@@ -95,7 +95,11 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
       case (ip, info) =>
         val start = Future {
           val workerClient = new WorkerClient(ip, info.port)
-          workerClient.startShuffle()
+          try {
+            workerClient.startShuffle()
+          } finally {
+            workerClient.shutdown()
+          }
         }
 
         start.recover {
