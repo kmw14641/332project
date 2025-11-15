@@ -1,9 +1,9 @@
-package worker
+package global
 
 import com.google.protobuf.ByteString
 
 // Worker Singleton
-object Worker {
+object WorkerState {
   private var masterIp: Option[String] = None
   private var masterPort: Option[Int] = None
   private var inputDirs: Seq[String] = Nil
