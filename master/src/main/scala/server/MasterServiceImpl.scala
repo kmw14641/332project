@@ -1,10 +1,10 @@
-package master
+package server
 
 import io.grpc.{Server, ServerBuilder}
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse, SampleData, SampleResponse}
-import master.Master
-import worker.WorkerClient
+import global.Master
+import client.WorkerClient
 
 // TODO: handling fault tolerance
 // 1. worker shutdown after Master.registerWorker

@@ -1,4 +1,4 @@
-package master
+package global
 
 import master.MasterService.WorkerInfo
 import scala.collection.mutable.ArrayBuffer

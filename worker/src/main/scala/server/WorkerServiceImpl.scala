@@ -1,9 +1,10 @@
-package worker
+package server
 
 import scala.concurrent.{ExecutionContext, Future}
 import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, RangeAssignment, WorkerNetworkInfo, AssignRangesResponse, WorkerRangeAssignment}
 import io.grpc.{Status, StatusException}
 import java.math.BigInteger
+import global.Worker
 
 class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc.WorkerService {
   override def assignRanges(request: WorkersRangeAssignment): Future[AssignRangesResponse] = {

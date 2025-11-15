@@ -1,4 +1,4 @@
-package worker
+package client
 
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import scala.concurrent.duration._

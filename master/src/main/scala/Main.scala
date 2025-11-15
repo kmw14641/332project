@@ -4,7 +4,8 @@ import greeter.Greeter.GreeterGrpc
 import greeter.GreeterImpl
 import greeter.GreeterClient
 import utils.MasterOptionUtils
-import master.{MasterServiceImpl, Master}
+import server.MasterServiceImpl
+import global.Master
 import master.MasterService.MasterServiceGrpc
 import common.utils.SystemUtils
 

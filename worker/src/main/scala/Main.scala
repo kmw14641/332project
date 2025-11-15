@@ -1,8 +1,9 @@
 import io.grpc.ServerBuilder
 import scala.concurrent.ExecutionContext
 import utils.{WorkerOptionUtils, PathUtils, SamplingUtils}
-import master.MasterClient
-import worker.{Worker, WorkerServiceImpl}
+import client.MasterClient
+import server.{WorkerServiceImpl}
+import global.Worker
 import worker.WorkerService.WorkerServiceGrpc
 import scala.concurrent.Future
 import common.utils.SystemUtils

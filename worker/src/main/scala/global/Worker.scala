@@ -1,4 +1,4 @@
-package worker
+package global
 
 import com.google.protobuf.ByteString
 
