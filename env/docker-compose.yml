@@ -2,6 +2,7 @@ name: cyan
 
 x-app: &common
   image: cyan:1.0
+  platform: linux/amd64
   volumes:
     - ../:/app
   command: ["tail", "-f", "/dev/null"]
