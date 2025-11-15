@@ -5,7 +5,7 @@
 FROM rockylinux:8
 
 # Basic utilities
-RUN dnf install -y wget curl tar git unzip which && dnf clean all
+RUN dnf install -y wget curl tar git unzip which bc && dnf clean all
 
 # Install Amazon Corretto JDK 17
 RUN curl -L -o /tmp/corretto.rpm https://corretto.aws/downloads/latest/amazon-corretto-17-x64-linux-jdk.rpm && \
