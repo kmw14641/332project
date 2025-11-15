@@ -2,7 +2,7 @@ package worker
 
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, WorkerRangeAssignment, WorkerNetworkInfo, RangeAssignment, AssignRangesResponse, StartShuffleCommand}
 import com.google.protobuf.ByteString
 
@@ -42,14 +42,9 @@ class WorkerClient(host: String, port: Int)(implicit ec: ExecutionContext) {
     channel.shutdown()
   }
 
-  def startShuffle(reason: String = "Shuffle phase start"): Boolean = {
+  def startShuffle(reason: String = "Shuffle phase start"): Future[Boolean] = {
     val request = StartShuffleCommand(reason = reason)
-    val responseFuture = stub.startShuffle(request)
-
-    try {
-      val response = Await.result(responseFuture, 10.seconds)
-      response.success
-    } catch {
+    stub.startShuffle(request).map(_.success).recover {
       case e: Exception =>
         println(s"Error starting shuffle phase on worker $host:$port: ${e.getMessage}")
         false

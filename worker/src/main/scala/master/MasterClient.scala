@@ -2,7 +2,7 @@ package master
 
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse, SampleData, SampleResponse, SyncPhaseReport, SyncPhaseAck}
 import com.google.protobuf.ByteString
 
@@ -59,14 +59,9 @@ class MasterClient(host: String, port: Int)(implicit ec: ExecutionContext) {
     channel.shutdown()
   }
 
-  def reportSyncCompletion(workerIp: String): Boolean = {
+  def reportSyncCompletion(workerIp: String): Future[Boolean] = {
     val request = SyncPhaseReport(workerIp = workerIp)
-    val responseFuture = stub.reportSyncCompletion(request)
-
-    try {
-      val response = Await.result(responseFuture, 15.seconds)
-      response.success
-    } catch {
+    stub.reportSyncCompletion(request).map(_.success).recover {
       case e: Exception =>
         println(s"Error reporting synchronization completion: ${e.getMessage}")
         false
