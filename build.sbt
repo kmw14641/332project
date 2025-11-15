@@ -24,6 +24,9 @@ lazy val customMergeStrategy: String => MergeStrategy = {
 }
 
 ThisBuild / scalaVersion := "2.13.17"
+ThisBuild / scalacOptions ++= Seq(
+  "-Xasync"
+)
 
 val commonSettings = Seq(
   // https://scalapb.github.io/docs/installation/, https://scalapb.github.io/docs/grpc
@@ -34,7 +37,8 @@ val commonSettings = Seq(
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion,
     "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
-    "com.github.scopt" %% "scopt" % "4.1.0"
+    "com.github.scopt" %% "scopt" % "4.1.0",
+    "org.scala-lang.modules" %% "scala-async" % "1.0.1",
   )
 )
 
