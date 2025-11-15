@@ -5,7 +5,7 @@ import scala.collection.mutable.ArrayBuffer
 import com.google.protobuf.ByteString
 
 // Master Singleton
-object Master {
+object MasterState {
   private var workersNum: Int = -1
   private var registeredWorkers = Map[String, WorkerInfo]()
   private var samples = Map[String, Seq[ByteString]]()  // workerIp -> sampled keys

@@ -4,7 +4,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, RangeAssignment, WorkerNetworkInfo, AssignRangesResponse, WorkerRangeAssignment}
 import io.grpc.{Status, StatusException}
 import java.math.BigInteger
-import global.Worker
+import global.WorkerState
 
 class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc.WorkerService {
   override def assignRanges(request: WorkersRangeAssignment): Future[AssignRangesResponse] = {
@@ -22,7 +22,7 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
     }.toMap
 
     // Store the assigned range in the Worker singleton
-    Worker.setAssignedRange(workersRangeAssignment)
+    WorkerState.setAssignedRange(workersRangeAssignment)
     workersRangeAssignment.foreach {
       // Print assigned ranges for debugging
       case ((ip, port), (start, end)) =>

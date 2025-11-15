@@ -5,7 +5,7 @@ import greeter.GreeterImpl
 import greeter.GreeterClient
 import utils.MasterOptionUtils
 import server.MasterServiceImpl
-import global.Master
+import global.MasterState
 import master.MasterService.MasterServiceGrpc
 import common.utils.SystemUtils
 
@@ -16,7 +16,7 @@ object Main extends App {
     sys.exit(1)
   }
 
-  Master.setWorkersNum(workersNum)
+  MasterState.setWorkersNum(workersNum)
 
   val ip = SystemUtils.getLocalIp.getOrElse {
     println("Failed to get local IP address")
