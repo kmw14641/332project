@@ -2,7 +2,7 @@ package master
 
 import io.grpc.{Server, ServerBuilder}
 import scala.concurrent.{ExecutionContext, Future}
-import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse, SampleData, SampleResponse}
+import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse, SampleData, SampleResponse, SyncPhaseReport, SyncPhaseAck}
 import master.Master
 import worker.WorkerClient
 
@@ -60,6 +60,48 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
         case e: Exception =>
           println(s"Failed to assign range to worker $ip:${info.port}: ${e.getMessage}")
       }
+    }
+  }
+  /*
+  By using markSyncCompleted, check if all workers have reported sync completion.
+  If all have completed and shuffle has not started yet, trigger the shuffle phase.
+  */
+  override def reportSyncCompletion(request: SyncPhaseReport): Future[SyncPhaseAck] = {
+    val (allCompleted, current, total) = Master.markSyncCompleted(request.workerIp)
+    println(s"Worker ${request.workerIp} completed synchronization ($current/$total)")
+
+    if (allCompleted && !Master.hasShuffleStarted) {
+      Future {
+        startShufflePhase()
+      }
+    }
+
+    Future.successful(
+      SyncPhaseAck(success = true, message = "Acknowledged synchronization completion")
+    )
+  }
+
+  private def startShufflePhase(): Unit = this.synchronized {
+    if (Master.hasShuffleStarted) {
+      println("Shuffle phase already started; ignoring duplicate request.")
+      return
+    }
+
+    Master.markShuffleStarted()
+    println("All workers reported sync completion. Triggering shuffle phase...")
+
+    val workers = Master.getRegisteredWorkers
+    workers.foreach {
+      case (ip, info) =>
+        val start = Future {
+          val workerClient = new WorkerClient(ip, info.port)
+          workerClient.startShuffle()
+        }
+
+        start.recover {
+          case e: Exception =>
+            println(s"Failed to send shuffle start command to worker $ip:${info.port}: ${e.getMessage}")
+        }
     }
   }
 }
