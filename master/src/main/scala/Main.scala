@@ -1,8 +1,5 @@
 import io.grpc.ServerBuilder
 import scala.concurrent.ExecutionContext
-import greeter.Greeter.GreeterGrpc
-import greeter.GreeterImpl
-import greeter.GreeterClient
 import utils.MasterOptionUtils
 import server.MasterServiceImpl
 import global.MasterState
@@ -32,8 +29,6 @@ object Main extends App {
 
   val port = server.getPort
   println(s"$ip:$port")
-
-  // new GreeterClient().fansign()
 
   server.awaitTermination()
 }
