@@ -49,11 +49,11 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
       throw new StatusException(Status.INVALID_ARGUMENT.withDescription("Sender info is missing"))
     )
 
-    val files = request.files.map(meta => Worker.ReceivedFileInfo(meta.fileName))
+    val files = request.files.map(_.fileName)
     Worker.addIncomingFilePlan((senderInfo.ip, senderInfo.port), files)
 
     //for debugging
-    val fileNames = files.map(_.fileName).mkString(", ")
+    val fileNames = files.mkString(", ")
     println(s"[Sync][RecvList] ${senderInfo.ip}:${senderInfo.port} -> files: [$fileNames]")
     println(s"Received ${files.size} file descriptions from ${senderInfo.ip}:${senderInfo.port}")
 

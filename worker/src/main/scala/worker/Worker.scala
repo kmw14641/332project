@@ -12,10 +12,8 @@ object Worker {
   private var assignedRange: Option[Map[(String, Int), (ByteString, ByteString)]] = None
   private var workerIp: Option[String] = None
   private var workerPort: Option[Int] = None
-  private var incomingFilePlans = Map[(String, Int), Seq[ReceivedFileInfo]]()
+  private var incomingFilePlans = Map[(String, Int), Seq[String]]()
   private val shuffleStartPromise: Promise[Unit] = Promise[Unit]()
-
-  case class ReceivedFileInfo(fileName: String)
 
   def setMasterAddr(ip: String, port: Int): Unit = this.synchronized {
     masterIp = Some(ip)
@@ -65,12 +63,12 @@ object Worker {
     } yield (ip, port)
   }
 
-  def addIncomingFilePlan(sender: (String, Int), files: Seq[ReceivedFileInfo]): Unit = this.synchronized {
+  def addIncomingFilePlan(sender: (String, Int), files: Seq[String]): Unit = this.synchronized {
     val existing = incomingFilePlans.getOrElse(sender, Seq.empty)
     incomingFilePlans += sender -> (existing ++ files)
   }
 
-  def getIncomingFilePlans: Map[(String, Int), Seq[ReceivedFileInfo]] = this.synchronized {
+  def getIncomingFilePlans: Map[(String, Int), Seq[String]] = this.synchronized {
     incomingFilePlans
   }
 
