@@ -4,9 +4,7 @@ import master.MasterClient
 import utils.PathUtils
 import worker.Worker
 import worker.WorkerService.{FileMetadata, WorkerNetworkInfo}
-
 import java.nio.file.{Files, Paths}
-import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
