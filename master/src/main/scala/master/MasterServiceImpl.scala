@@ -92,20 +92,13 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
 
     val workers = Master.getRegisteredWorkers
     workers.foreach {
-      case (ip, info) =>
-        val start = Future {
-          val workerClient = new WorkerClient(ip, info.port)
-          try {
-            workerClient.startShuffle()
-          } finally {
-            workerClient.shutdown()
-          }
-        }
-
-        start.recover {
-          case e: Exception =>
-            println(s"Failed to send shuffle start command to worker $ip:${info.port}: ${e.getMessage}")
-        }
+    case (ip, info) =>
+      val workerClient = new WorkerClient(ip, info.port)
+      workerClient.startShuffle().recover {
+        case e: Exception =>
+          println(s"Failed to send shuffle start command to worker $ip:${info.port}: ${e.getMessage}")
+          false
+      }.onComplete(_ => workerClient.shutdown())
     }
   }
 }

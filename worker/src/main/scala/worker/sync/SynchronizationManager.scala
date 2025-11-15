@@ -112,24 +112,21 @@ object SynchronizationManager {
     val senderInfo = WorkerNetworkInfo(ip = selfInfo._1, port = selfInfo._2)
 
     val sendFutures = plans.toSeq.map { case ((ip, port), files) =>
-      Future {
-        val client = new PeerWorkerClient(ip, port)
-        try {
-          val metadata = files.map(f => FileMetadata(fileName = f.fileName))
-          //'fileNames' stores the list of file to be transmitted.
-          val fileNames = files.map(_.fileName).mkString(", ")
-          println(s"[Sync][SendList] ${selfInfo._1}:${selfInfo._2} -> $ip:$port files: [$fileNames]")
-          
-          // Interchanging file list occurs here.
-          val success = client.deliverFileList(senderInfo, metadata)
-          if (success) {
-            println(s"[Sync] Delivered ${files.size} file descriptors to $ip:$port")
-          } else {
-            println(s"[Sync] Failed to deliver file descriptors to $ip:$port")
-          }
-        } finally {
-          client.shutdown()
+      val client = new PeerWorkerClient(ip, port)
+      val metadata = files.map(f => FileMetadata(fileName = f.fileName))
+      val fileNames = files.map(_.fileName).mkString(", ")
+      println(s"[Sync][SendList] ${selfInfo._1}:${selfInfo._2} -> $ip:$port files: [$fileNames]")
+
+      client.deliverFileList(senderInfo, metadata).map { success =>
+        if (success) {
+          println(s"[Sync] Delivered ${files.size} file descriptors to $ip:$port")
+        } else {
+          println(s"[Sync] Failed to deliver file descriptors to $ip:$port")
         }
+        client.shutdown()
+      }.recover { case e =>
+        println(s"[Sync] Error delivering file descriptors to $ip:$port: ${e.getMessage}")
+        client.shutdown()
       }
     }
 
@@ -137,21 +134,24 @@ object SynchronizationManager {
   }
 
   private def notifyMasterOfCompletion(workerIp: String)(implicit ec: ExecutionContext): Unit = {
-    Worker.getMasterAddr match {
-      case Some((masterIp, masterPort)) =>
-        val client = new MasterClient(masterIp, masterPort)
-        try {
-          val success = client.reportSyncCompletion(workerIp)
-          if (success) {
-            println("[Sync] Reported synchronization completion to master.")
-          } else {
-            println("[Sync] Master rejected synchronization completion report.")
-          }
-        } finally {
+  Worker.getMasterAddr match {
+    case Some((masterIp, masterPort)) =>
+      val client = new MasterClient(masterIp, masterPort)
+
+      client.reportSyncCompletion(workerIp).onComplete {
+        case scala.util.Success(true) =>
+          println("[Sync] Reported synchronization completion to master.")
           client.shutdown()
-        }
-      case None =>
-        println("[Sync] Master address is unknown. Unable to report synchronization completion.")
+        case scala.util.Success(false) =>
+          println("[Sync] Master rejected synchronization completion report.")
+          client.shutdown()
+        case scala.util.Failure(e) =>
+          println(s"[Sync] Error reporting synchronization completion: ${e.getMessage}")
+          client.shutdown()
+      }
+
+    case None =>
+      println("[Sync] Master address is unknown. Unable to report synchronization completion.")
     }
-  }
+  } 
 }
