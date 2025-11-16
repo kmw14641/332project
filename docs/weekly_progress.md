@@ -89,3 +89,39 @@
 - JongWon Lee : Finish implementing Disk-based merge sort
 - HyeonSeo Park : Finish implementing Synchronization Phase, State Restoration
 - MinWoo Kim : Finish implementing State Restoration
+
+## Week5 Progress Report
+
+**Progress in the week** 
+
+- Complete Review and Merged
+  - #5, #6, #7, #8
+- Implement disk-based merge sort phase & labeling phase @JongWon Lee
+  - https://github.com/kmw14641/332project/pull/20 - Reviewing
+- Implment synchronization phase @HyeonSeo Park
+  - https://github.com/kmw14641/332project/pull/21 - Reviewing
+- Reimplement shuffle phase by server environment testing @MinWoo Kim
+  - https://github.com/kmw14641/332project/pull/23 - Reviewing
+- Fixes
+  - Gensort was not generated randomly
+    - https://github.com/kmw14641/332project/pull/19 - Reviewing
+  - Docker Container did not work on Mac
+    - https://github.com/kmw14641/332project/pull/22 - Reviewing
+- Refactorings
+  - Re-establish folder structure @MinWoo Kim
+    - https://github.com/kmw14641/332project/pull/24 - Reviewing
+- Making presentation materials
+- Fault tolerance was not implemented, because of reimplementations
+
+
+**Goal of the next week:**
+- Finish implementation of all part
+  - Review & merge of current PR
+  - Implement state restoration (fault tolerance)
+  - Code refactoring
+  
+**Goal of the next week for each individual member**
+- For All : Possible code refactoring, check completeness of program
+- JongWon Lee : Finish implementing Final Merge, State Restoration
+- HyeonSeo Park : Finish implementing State Restoration
+- MinWoo Kim : Finish implementing State Restoration
