@@ -28,6 +28,16 @@ ThisBuild / scalacOptions ++= Seq(
   "-Xasync"
 )
 
+Global / onLoad := {
+  val prev = (Global / onLoad).value
+  state =>
+    println("-----------------------------------------")
+    println("ScalaPB compiler version: " + scalapb.compiler.Version.scalapbVersion)
+    println("gRPC Java version: " + scalapb.compiler.Version.grpcJavaVersion)
+    println("-----------------------------------------")
+    prev(state)
+}
+
 val commonSettings = Seq(
   // https://scalapb.github.io/docs/installation/, https://scalapb.github.io/docs/grpc
   Compile / PB.targets := Seq(

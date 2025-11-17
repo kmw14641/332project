@@ -7,7 +7,7 @@ import io.grpc.ManagedChannelBuilder
 import shuffle.Shuffle.{ShuffleGrpc, DownloadRequest, DownloadResponse}
 import scala.async.Async.{async, await}
 import utils.PathUtils.createDirectoryIfNotExists
-import io.grpc.stub.StreamObserver
+import io.grpc.stub.{StreamObserver, ClientCallStreamObserver, ClientResponseObserver}
 import java.nio.channels.FileChannel
 
 class ShuffleClient(implicit ec: ExecutionContext) {
@@ -50,23 +50,52 @@ class ShuffleClient(implicit ec: ExecutionContext) {
             StandardOpenOption.WRITE,
             StandardOpenOption.TRUNCATE_EXISTING
         )
+
+        def tryClose(fileChannel: FileChannel): Unit = {
+            try { fileChannel.close() } catch {
+                // 원래 예외를 보존하기 위해 catch 블록의 에러는 바로 처리 (로그만 남김)
+                case e: Throwable => println(s"[WARN] Failed to close fileChannel for [$workerIp, $filename]: ${e.getMessage}")
+            }
+        }
         
         println(s"[$workerIp, $filename] request")
-        stub.downloadFile(DownloadRequest(filename = filename), new StreamObserver[DownloadResponse] {
+        val observer = new ClientResponseObserver[DownloadRequest, DownloadResponse] {
+            // ClientReponseObserver defined as interface, we have to declare member ourselves. (I don't know why)
+            // although beforeStart is called before onNext, onNext is runned on thread pool, need to be volatile
+            @volatile private var clientObserver: Option[ClientCallStreamObserver[DownloadRequest]] = None
+
+            override def beforeStart(requestStream: ClientCallStreamObserver[DownloadRequest]): Unit = {
+                clientObserver = Some(requestStream)
+                requestStream.disableAutoRequestWithInitial(1)
+            }
+
             override def onNext(response: DownloadResponse): Unit = {
                 Worker.diskIoLock.synchronized {
                     blocking { fileChannel.write(response.data.asReadOnlyByteBuffer()) }
                 }
+                assert { clientObserver.isDefined }
+                clientObserver.get.request(1)
             }
 
-            override def onError(t: Throwable): Unit = promise.failure(t)
-            
+            override def onError(e: Throwable): Unit = {  // error during streaming
+                tryClose(fileChannel)
+                promise.failure(e)
+            }
+
             override def onCompleted(): Unit = {
                 println(s"[$workerIp, $filename] response completed")
-                fileChannel.close()
+                tryClose(fileChannel)
                 promise.success(())
             }
-        })
+        }
+        try {
+            stub.downloadFile(DownloadRequest(filename = filename), observer)
+        } catch {
+            case e: Exception => {   // error on creating connection
+                tryClose(fileChannel)
+                promise.failure(e)
+            }
+        }
 
         promise.future
     }

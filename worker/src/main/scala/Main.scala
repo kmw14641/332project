@@ -9,6 +9,8 @@ import shuffle.Shuffle.ShuffleGrpc
 import scala.concurrent.Future
 import client.ShuffleClient
 import com.google.protobuf.ByteString
+import scala.util.Success
+import scala.util.Failure
 
 object Main extends App {
   implicit val ec: ExecutionContext = ExecutionContext.global
@@ -36,10 +38,10 @@ object Main extends App {
   // Worker.setInputDirs(inputDirs)
   // Worker.setOutputDir(outputDir)
 
-  // val workerIp = SystemUtils.getLocalIp.getOrElse {
-  //   println("Failed to get local IP address")
-  //   sys.exit(1)
-  // }
+  val workerIp = SystemUtils.getLocalIp.getOrElse {
+    println("Failed to get local IP address")
+    sys.exit(1)
+  }
   
   // val ramMb = SystemUtils.getRamMb
 
@@ -101,10 +103,12 @@ val (s, e) = SystemUtils.getLocalIp.getOrElse("") match {
 
   // if (SystemUtils.getLocalIp.getOrElse("") == "2.2.2.101")
   new ShuffleClient().start(mockReceiverFileInfo).andThen( {
-    case _ =>
+    case Success(value) =>
       val end = System.nanoTime()
       val durationSeconds = (end - start).toDouble / 1e9
       println(f"Shuffle completed in $durationSeconds%.2f seconds")
+    case Failure(exception) => 
+      println(s"Shuffle failed: ${exception.getMessage}")
   })
 
   // val port = server.getPort
