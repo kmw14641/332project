@@ -4,6 +4,13 @@ import com.google.protobuf.ByteString
 
 // Worker Singleton
 object Worker {
+  val mergeDir: String = "/tmp/merge"
+  val shuffleDir: String = "/tmp/shuffle"
+
+  val maxGrpcMessageSize: Int = 1024 * 1024 * 1024  // 1GB
+
+  val diskIoLock = new Object()
+
   private var masterIp: Option[String] = None
   private var masterPort: Option[Int] = None
   private var inputDirs: Seq[String] = Nil
