@@ -16,7 +16,7 @@ object SamplingUtils {
   val RECORD_SIZE = 100  // 10 bytes key + 90 bytes value
   val KEY_SIZE = 10
   val SAMPLE_SIZE = Math.min(100000, SystemUtils.getRamMb * 1024 * 1024 / RECORD_SIZE)  // Number of samples to collect per worker, total 1MB
-  val THREAD_NUM = Math.min(8, Runtime.getRuntime.availableProcessors())
+  val THREAD_NUM = Math.min(8, SystemUtils.getProcessorNum)
 
   /**
    * Performs uniform sampling from input directories
