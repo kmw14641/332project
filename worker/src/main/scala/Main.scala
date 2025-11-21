@@ -1,8 +1,9 @@
 import io.grpc.ServerBuilder
 import scala.concurrent.ExecutionContext
 import utils.{WorkerOptionUtils, PathUtils, SamplingUtils}
-import master.MasterClient
-import worker.{Worker, WorkerServiceImpl}
+import client.MasterClient
+import server.{WorkerServiceImpl}
+import global.WorkerState
 import worker.WorkerService.WorkerServiceGrpc
 import scala.concurrent.Future
 import common.utils.SystemUtils
@@ -30,9 +31,9 @@ object Main extends App {
 
   PathUtils.createDirectoryIfNotExists(outputDir)
 
-  Worker.setMasterAddr(masterIp, masterPort)
-  Worker.setInputDirs(inputDirs)
-  Worker.setOutputDir(outputDir)
+  WorkerState.setMasterAddr(masterIp, masterPort)
+  WorkerState.setInputDirs(inputDirs)
+  WorkerState.setOutputDir(outputDir)
 
   val server = ServerBuilder
     .forPort(0)

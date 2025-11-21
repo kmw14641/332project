@@ -1,10 +1,10 @@
-package master
+package server
 
 import io.grpc.{Server, ServerBuilder}
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{MasterServiceGrpc, WorkerInfo, RegisterWorkerResponse, SampleData, SampleResponse}
-import master.Master
-import worker.WorkerClient
+import global.MasterState
+import client.WorkerClient
 
 // TODO: handling fault tolerance
 // 1. worker shutdown after Master.registerWorker
@@ -14,7 +14,7 @@ import worker.WorkerClient
 // 2. worker gives samples => register worker works well, dont care about it
 class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc.MasterService {
   override def registerWorker(request: WorkerInfo): Future[RegisterWorkerResponse] = {
-    Master.registerWorker(request)
+    MasterState.registerWorker(request)
 
     Future.successful(
       RegisterWorkerResponse(success = true)
@@ -23,13 +23,13 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
 
   override def sampling(request: SampleData): Future[SampleResponse] = {
     val keys = request.keys
-    val success = Master.addSamples(request.workerIp, keys)
+    val success = MasterState.addSamples(request.workerIp, keys)
 
     // If all workers have sent samples, calculate ranges
-    if (Master.getSampleSize == Master.getWorkersNum && success) {
-      Master.calculateRanges()
+    if (MasterState.getSampleSize == MasterState.getWorkersNum && success) {
+      MasterState.calculateRanges()
       // If ranges are ready, trigger range assignment
-      if (Master.isRangesReady) {
+      if (MasterState.isRangesReady) {
         // Spawn a separate thread to assign ranges to workers
         Future {
           assignRangesToWorkers()
@@ -44,8 +44,8 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
   }
 
   private def assignRangesToWorkers(): Unit = {
-    val workers = Master.getRegisteredWorkers.toSeq.sortBy(_._1)  // Sort by IP for consistent ordering
-    val ranges = Master.getRanges
+    val workers = MasterState.getRegisteredWorkers.toSeq.sortBy(_._1)  // Sort by IP for consistent ordering
+    val ranges = MasterState.getRanges
 
     println("Assigning ranges to workers...")
 
