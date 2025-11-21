@@ -10,6 +10,7 @@ object Worker {
   private var inputDirs: Seq[String] = Nil
   private var outputDir: Option[String] = None
   private var assignedRange: Option[Map[(String, Int), (ByteString, ByteString)]] = None
+  private var assignedFiles: Map[(String, Int), List[String]] = Map.empty
   private var workerIp: Option[String] = None
   private var workerPort: Option[Int] = None
   private var incomingFilePlans = Map[(String, Int), Seq[String]]()
@@ -49,6 +50,14 @@ object Worker {
 
   def getAssignedRange: Option[Map[(String, Int), (ByteString, ByteString)]] = this.synchronized {
     assignedRange
+  }
+
+  def setAssignedFiles(files: Map[(String, Int), List[String]]): Unit = this.synchronized {
+    assignedFiles = files
+  }
+
+  def getAssignedFiles: Map[(String, Int), List[String]] = this.synchronized {
+    assignedFiles
   }
 
   def setWorkerNetworkInfo(ip: String, port: Int): Unit = this.synchronized {

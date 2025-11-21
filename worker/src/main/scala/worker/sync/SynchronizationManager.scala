@@ -1,17 +1,12 @@
 package worker.sync
 
 import master.MasterClient
-import utils.PathUtils
 import worker.Worker
 import worker.WorkerService.{FileMetadata, WorkerNetworkInfo}
-import java.nio.file.{Files, Paths}
-import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 object SynchronizationManager {
-  private val FileNamePattern = """^(.+?)_(.+?)_(\d+)$""".r
-
   def triggerSyncPhase()(implicit ec: ExecutionContext): Unit = {
     Future {
       runSyncPhase()
@@ -23,26 +18,12 @@ object SynchronizationManager {
   }
 
   private def runSyncPhase()(implicit ec: ExecutionContext): Unit = {
-    val labeledRoot = Paths.get("/labeled")
-    if (!Files.exists(labeledRoot) || !Files.isDirectory(labeledRoot)) {
-      println("[Sync] Labeled directory '/labeled' is missing. Abort synchronization.")
-      return
-    }
-    val outputDir = labeledRoot.toAbsolutePath.toString
-
     val selfInfo = Worker.getWorkerNetworkInfo.getOrElse {
       println("[Sync] Worker network information is unavailable. Abort synchronization.")
       return
     }
-    val assigned = Worker.getAssignedRange.getOrElse {
-      println("[Sync] Assigned ranges are missing. Abort synchronization.")
-      return
-    }
 
-    val workerLookupByIp: Map[String, (String, Int)] =
-      assigned.keys.groupBy(_._1).view.mapValues(_.head).toMap
-
-    val outgoingPlans = collectOutgoingPlans(outputDir, selfInfo._1, workerLookupByIp)
+    val outgoingPlans = getOutgoingPlans(selfInfo)
     transmitPlans(outgoingPlans, selfInfo)
     notifyMasterOfCompletion(selfInfo._1)
 
@@ -53,46 +34,15 @@ object SynchronizationManager {
     println("[Sync] Master authorized shuffle phase. Ready for file transfers.")
     // Shuffle phase will starts after this point.
   }
-  
-  //Indicates which file to send to whom.
-  private case class LocalFileDescriptor(fileName: String, destinationIp: String)
 
   /*
-  By using labeled directory, scan all files and prepare plans for outgoing file metadata.
-  Parse the file name and group files by their destination worker.
-  Return a map where the key is the worker's (IP, port) and the value is a sequence of LocalFileDescriptor.
+  Consume worker-provided assignments and drop entries that point back to the current worker or are empty.
   */
-  private def collectOutgoingPlans(
-    outputDir: String,
-    selfIp: String,
-    lookup: Map[String, (String, Int)]
-  ): Map[(String, Int), Seq[LocalFileDescriptor]] = {
-    val files = PathUtils.getFilesList(outputDir)
-    val plans = mutable.Map[(String, Int), mutable.ListBuffer[LocalFileDescriptor]]()
-
-    files.foreach { filePath =>
-      val path = Paths.get(filePath)
-      if (Files.isRegularFile(path)) {
-        val fileName = path.getFileName.toString
-        fileName match {
-          case FileNamePattern(_, toIp, _) if toIp == selfIp =>
-            // File is destined for this worker. No need to send metadata elsewhere.
-          case FileNamePattern(_, toIp, _) =>
-            lookup.get(toIp) match {
-              case Some(endpoint) =>
-                val descriptor = LocalFileDescriptor(fileName, toIp)
-                val buffer = plans.getOrElseUpdate(endpoint, mutable.ListBuffer.empty)
-                buffer += descriptor
-              case None =>
-                println(s"[Sync] No registered worker for destination IP $toIp (file: $fileName). Skipping.")
-            }
-          case _ =>
-            println(s"[Sync] File $fileName does not match expected pattern. Skipping.")
-        }
+  private def getOutgoingPlans(selfInfo: (String, Int)): Map[(String, Int), Seq[String]] = {
+    Worker.getAssignedFiles.collect {
+        case (endpoint, files) if endpoint != selfInfo && files.nonEmpty =>
+          endpoint -> files.toSeq
       }
-    }
-
-    plans.view.mapValues(_.toSeq).toMap
   }
 
   /*
@@ -101,7 +51,7 @@ object SynchronizationManager {
   Await all transmissions to complete before returning.
   */
   private def transmitPlans(
-    plans: Map[(String, Int), Seq[LocalFileDescriptor]],
+    plans: Map[(String, Int), Seq[String]],
     selfInfo: (String, Int)
   )(implicit ec: ExecutionContext): Unit = {
     if (plans.isEmpty) {
@@ -113,8 +63,8 @@ object SynchronizationManager {
 
     val sendFutures = plans.toSeq.map { case ((ip, port), files) =>
       val client = new PeerWorkerClient(ip, port)
-      val metadata = files.map(f => FileMetadata(fileName = f.fileName))
-      val fileNames = files.map(_.fileName).mkString(", ")
+      val metadata = files.map(fileName => FileMetadata(fileName = fileName))
+      val fileNames = files.mkString(", ")
       println(s"[Sync][SendList] ${selfInfo._1}:${selfInfo._2} -> $ip:$port files: [$fileNames]")
 
       client.deliverFileList(senderInfo, metadata).map { success =>
