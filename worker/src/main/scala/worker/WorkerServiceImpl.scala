@@ -50,7 +50,7 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
     )
 
     val files = request.files.map(_.fileName)
-    Worker.addIncomingFilePlan((senderInfo.ip, senderInfo.port), files)
+    Worker.addIncomingFilePlan(senderInfo.ip, files)
 
     //for debugging
     val fileNames = files.mkString(", ")
