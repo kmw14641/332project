@@ -104,11 +104,6 @@ object Master {
     (syncCompletedWorkers.size == registeredWorkers.size, syncCompletedWorkers.size, registeredWorkers.size)
   }
 
-  def resetSyncState(): Unit = this.synchronized {
-    syncCompletedWorkers = Set.empty
-    shuffleStarted = false
-  }
-
   def markShuffleStarted(): Unit = this.synchronized {
     shuffleStarted = true
   }
