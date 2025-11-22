@@ -88,16 +88,13 @@ object SynchronizationManager {
     case Some((masterIp, masterPort)) =>
       val client = new MasterClient(masterIp, masterPort)
 
-      client.reportSyncCompletion(workerIp).onComplete {
-        case scala.util.Success(true) =>
+      client.reportSyncCompletion(workerIp).foreach { success =>
+        if (success) {
           println("[Sync] Reported synchronization completion to master.")
-          client.shutdown()
-        case scala.util.Success(false) =>
+        } else {
           println("[Sync] Master rejected synchronization completion report.")
-          client.shutdown()
-        case scala.util.Failure(e) =>
-          println(s"[Sync] Error reporting synchronization completion: ${e.getMessage}")
-          client.shutdown()
+        }
+        client.shutdown()
       }
 
     case None =>
