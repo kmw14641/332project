@@ -6,6 +6,12 @@ package worker;
 service WorkerService {
   // Master assigns a range to the worker
   rpc AssignRanges (WorkersRangeAssignment) returns (AssignRangesResponse) {}
+
+  // Sender notifies receiver about the files that should be delivered during shuffle phase
+  rpc DeliverFileList (FileListMessage) returns (FileListAck) {}
+
+  // Master notifies workers to start shuffle phase simultaneously
+  rpc StartShuffle (StartShuffleCommand) returns (StartShuffleAck) {}
 }
 
 message WorkerNetworkInfo {
@@ -30,5 +36,26 @@ message WorkersRangeAssignment {
 
 // Response from worker after receiving range
 message AssignRangesResponse {
+  bool success = 1;
+}
+
+message FileMetadata {
+  string file_name = 1;
+}
+
+message FileListMessage {
+  string sender_ip = 1;
+  repeated FileMetadata files = 2;
+}
+
+message FileListAck {
+  bool success = 1;
+}
+
+message StartShuffleCommand {
+  string reason = 1;
+}
+
+message StartShuffleAck {
   bool success = 1;
 }

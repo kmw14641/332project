@@ -1,6 +1,7 @@
 package worker
 
 import com.google.protobuf.ByteString
+import scala.concurrent.{Future, Promise}
 
 // Worker Singleton
 object Worker {
@@ -9,6 +10,9 @@ object Worker {
   private var inputDirs: Seq[String] = Nil
   private var outputDir: Option[String] = None
   private var assignedRange: Option[Map[(String, Int), (ByteString, ByteString)]] = None
+  private var assignedFiles: Map[(String, Int), List[String]] = Map.empty
+  private var incomingFilePlans = Map[String, Seq[String]]()
+  private val shuffleStartPromise: Promise[Unit] = Promise[Unit]()
 
   def setMasterAddr(ip: String, port: Int): Unit = this.synchronized {
     masterIp = Some(ip)
@@ -45,4 +49,31 @@ object Worker {
   def getAssignedRange: Option[Map[(String, Int), (ByteString, ByteString)]] = this.synchronized {
     assignedRange
   }
+
+  def setAssignedFiles(files: Map[(String, Int), List[String]]): Unit = this.synchronized {
+    assignedFiles = files
+  }
+
+  def getAssignedFiles: Map[(String, Int), List[String]] = this.synchronized {
+    assignedFiles
+  }
+
+  def addIncomingFilePlan(senderIp: String, files: Seq[String]): Unit = this.synchronized {
+    val existing = incomingFilePlans.getOrElse(senderIp, Seq.empty)
+    incomingFilePlans += senderIp -> (existing ++ files)
+  }
+
+  def getIncomingFilePlans: Map[String, Seq[String]] = this.synchronized {
+    incomingFilePlans
+  }
+
+  def markShuffleStarted(): Unit = this.synchronized {
+    if (!shuffleStartPromise.isCompleted) {
+      shuffleStartPromise.success(())
+    }
+  }
+
+  def waitForShuffleCommand: Future[Unit] = shuffleStartPromise.future
+
+  def hasReceivedShuffleCommand: Boolean = shuffleStartPromise.isCompleted
 }
