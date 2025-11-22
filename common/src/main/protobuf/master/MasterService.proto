@@ -44,5 +44,4 @@ message SyncPhaseReport {
 
 message SyncPhaseAck {
   bool success = 1;
-  string message = 2;
 }

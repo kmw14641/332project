@@ -76,9 +76,7 @@ class MasterServiceImpl(implicit ec: ExecutionContext) extends MasterServiceGrpc
       }
     }
 
-    Future.successful(
-      SyncPhaseAck(success = true, message = "Acknowledged synchronization completion")
-    )
+    Future.successful(SyncPhaseAck(success = true))
   }
 
   private def startShufflePhase(): Unit = this.synchronized {
