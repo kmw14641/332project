@@ -47,8 +47,6 @@ object Main extends App {
   }
   val ramMb = SystemUtils.getRamMb
   val port = server.getPort
-  Worker.setWorkerNetworkInfo(workerIp, port)
-
   val client = new MasterClient(masterIp, masterPort)
   client.registerWorker(workerIp, port, ramMb)
 

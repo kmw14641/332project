@@ -11,8 +11,6 @@ object Worker {
   private var outputDir: Option[String] = None
   private var assignedRange: Option[Map[(String, Int), (ByteString, ByteString)]] = None
   private var assignedFiles: Map[(String, Int), List[String]] = Map.empty
-  private var workerIp: Option[String] = None
-  private var workerPort: Option[Int] = None
   private var incomingFilePlans = Map[String, Seq[String]]()
   private val shuffleStartPromise: Promise[Unit] = Promise[Unit]()
 
@@ -58,18 +56,6 @@ object Worker {
 
   def getAssignedFiles: Map[(String, Int), List[String]] = this.synchronized {
     assignedFiles
-  }
-
-  def setWorkerNetworkInfo(ip: String, port: Int): Unit = this.synchronized {
-    workerIp = Some(ip)
-    workerPort = Some(port)
-  }
-
-  def getWorkerNetworkInfo: Option[(String, Int)] = this.synchronized {
-    for {
-      ip <- workerIp
-      port <- workerPort
-    } yield (ip, port)
   }
 
   def addIncomingFilePlan(senderIp: String, files: Seq[String]): Unit = this.synchronized {

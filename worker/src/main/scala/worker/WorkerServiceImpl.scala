@@ -5,6 +5,7 @@ import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, RangeAss
 import io.grpc.{Status, StatusException}
 import java.math.BigInteger
 import worker.sync.SynchronizationManager
+import common.utils.SystemUtils
 
 class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc.WorkerService {
   override def assignRanges(request: WorkersRangeAssignment): Future[AssignRangesResponse] = {
@@ -45,17 +46,14 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
   Store the incoming file plans in the Worker singleton for later processing.
   */
   override def deliverFileList(request: FileListMessage): Future[FileListAck] = {
-    val senderInfo = request.sender.getOrElse(
-      throw new StatusException(Status.INVALID_ARGUMENT.withDescription("Sender info is missing"))
-    )
-
+    val senderIp = request.senderIp    
     val files = request.files.map(_.fileName)
-    Worker.addIncomingFilePlan(senderInfo.ip, files)
+    Worker.addIncomingFilePlan(senderIp, files)
 
     //for debugging
     val fileNames = files.mkString(", ")
-    println(s"[Sync][RecvList] ${senderInfo.ip}:${senderInfo.port} -> files: [$fileNames]")
-    println(s"Received ${files.size} file descriptions from ${senderInfo.ip}:${senderInfo.port}")
+    println(s"[Sync][RecvList] $senderIp -> files: [$fileNames]")
+    println(s"Received ${files.size} file descriptions from $senderIp")
 
     Future.successful(FileListAck(success = true))
   }

@@ -44,7 +44,7 @@ message FileMetadata {
 }
 
 message FileListMessage {
-  WorkerNetworkInfo sender = 1;
+  string sender_ip = 1;
   repeated FileMetadata files = 2;
 }
 

@@ -3,7 +3,7 @@ package worker.sync
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import worker.WorkerService.{WorkerServiceGrpc, WorkerNetworkInfo, FileMetadata, FileListMessage}
+import worker.WorkerService.{WorkerServiceGrpc, FileMetadata, FileListMessage}
 
 class PeerWorkerClient(host: String, port: Int)(implicit ec: ExecutionContext) {
   private val channel: ManagedChannel = ManagedChannelBuilder
@@ -13,9 +13,9 @@ class PeerWorkerClient(host: String, port: Int)(implicit ec: ExecutionContext) {
 
   private val stub = WorkerServiceGrpc.stub(channel)
 
-  def deliverFileList(sender: WorkerNetworkInfo, files: Seq[FileMetadata]): Future[Boolean] = {
+  def deliverFileList(senderIp: String, files: Seq[FileMetadata]): Future[Boolean] = {
     val request = FileListMessage(
-      sender = Some(sender),
+      senderIp = senderIp,
       files = files
     )
 

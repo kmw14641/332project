@@ -2,7 +2,8 @@ package worker.sync
 
 import master.MasterClient
 import worker.Worker
-import worker.WorkerService.{FileMetadata, WorkerNetworkInfo}
+import worker.WorkerService.FileMetadata
+import common.utils.SystemUtils
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -18,14 +19,14 @@ object SynchronizationManager {
   }
 
   private def runSyncPhase()(implicit ec: ExecutionContext): Unit = {
-    val selfInfo = Worker.getWorkerNetworkInfo.getOrElse {
-      println("[Sync] Worker network information is unavailable. Abort synchronization.")
+    val selfIp = SystemUtils.getLocalIp.getOrElse {
+      println("[Sync] Failed to determine local IP. Abort synchronization.")
       return
     }
 
-    val outgoingPlans = getOutgoingPlans(selfInfo)
-    transmitPlans(outgoingPlans, selfInfo)
-    notifyMasterOfCompletion(selfInfo._1)
+    val outgoingPlans = getOutgoingPlans(selfIp)
+    transmitPlans(outgoingPlans, selfIp)
+    notifyMasterOfCompletion(selfIp)
 
     println("[Sync] Synchronization completed. Waiting for master's shuffle command...")
 
@@ -38,9 +39,9 @@ object SynchronizationManager {
   /*
   Consume worker-provided assignments and drop entries that point back to the current worker or are empty.
   */
-  private def getOutgoingPlans(selfInfo: (String, Int)): Map[(String, Int), Seq[String]] = {
+  private def getOutgoingPlans(selfIp: String): Map[(String, Int), Seq[String]] = {
     Worker.getAssignedFiles.collect {
-        case (endpoint, files) if endpoint != selfInfo && files.nonEmpty =>
+        case (endpoint, files) if endpoint._1 != selfIp && files.nonEmpty =>
           endpoint -> files.toSeq
       }
   }
@@ -52,22 +53,20 @@ object SynchronizationManager {
   */
   private def transmitPlans(
     plans: Map[(String, Int), Seq[String]],
-    selfInfo: (String, Int)
+    selfIp: String
   )(implicit ec: ExecutionContext): Unit = {
     if (plans.isEmpty) {
       println("[Sync] No outgoing files to report.")
       return
     }
 
-    val senderInfo = WorkerNetworkInfo(ip = selfInfo._1, port = selfInfo._2)
-
     val sendFutures = plans.toSeq.map { case ((ip, port), files) =>
       val client = new PeerWorkerClient(ip, port)
       val metadata = files.map(fileName => FileMetadata(fileName = fileName))
       val fileNames = files.mkString(", ")
-      println(s"[Sync][SendList] ${selfInfo._1}:${selfInfo._2} -> $ip:$port files: [$fileNames]")
+      println(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
 
-      client.deliverFileList(senderInfo, metadata).map { success =>
+      client.deliverFileList(selfIp, metadata).map { success =>
         if (success) {
           println(s"[Sync] Delivered ${files.size} file descriptors to $ip:$port")
         } else {
