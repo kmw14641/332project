@@ -12,6 +12,7 @@ import scala.async.Async.{async, await}
 import java.nio.file.Files
 import shuffle.Shuffle.ShuffleGrpc
 import utils.FileManager
+import global.StateRestoreManager
 
 object Main extends App {
   implicit val ec: ExecutionContext = ExecutionContext.global
@@ -41,6 +42,10 @@ object Main extends App {
   WorkerState.setOutputDir(outputDir)
   FileManager.setInputDirs(inputDirs)
   FileManager.setOutputDir(outputDir)
+
+  if (!StateRestoreManager.isClean()) {
+    StateRestoreManager.restoreState()
+  }
 
   val server = ServerBuilder
     .forPort(0)
@@ -97,6 +102,8 @@ object Main extends App {
     FileManager.deleteAllSubDir
 
     await { new TerminationManager().shutdownServerSafely(server) }
+
+    StateRestoreManager.clear()
   }
 
   Await.result(mainWaiting, Duration.Inf)
