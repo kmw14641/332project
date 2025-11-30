@@ -6,8 +6,6 @@ import com.google.protobuf.ByteString
 
 // Worker Singleton
 object WorkerState {
-  val diskIoLock = new Object()
-
   private var masterIp: Option[String] = None
   private var masterPort: Option[Int] = None
   private var assignedRange: Option[Map[(String, Int), (Key, Key)]] = None

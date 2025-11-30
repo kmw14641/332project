@@ -11,6 +11,7 @@ import utils.FileManager
 import io.grpc.stub.{StreamObserver, ClientCallStreamObserver, ClientResponseObserver}
 import java.nio.channels.FileChannel
 import common.utils.SystemUtils
+import global.GlobalLock
 import utils.FileManager.{InputSubDir, OutputSubDir}
 
 class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit ec: ExecutionContext) {
@@ -81,7 +82,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
             }
 
             override def onNext(response: DownloadResponse): Unit = {
-                WorkerState.diskIoLock.synchronized {
+                GlobalLock.diskIoLock.synchronized {
                     blocking {
                         val writeBuffer = response.data.asReadOnlyByteBuffer()
                         while (writeBuffer.hasRemaining) {
