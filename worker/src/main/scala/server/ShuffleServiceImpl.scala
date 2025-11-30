@@ -12,6 +12,7 @@ import java.nio.ByteBuffer
 import io.grpc.stub.{StreamObserver, ServerCallStreamObserver}
 import java.util.concurrent.atomic.AtomicBoolean
 import utils.FileManager
+import global.GlobalLock
 
 class ShuffleServiceImpl(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuffle {
     val chunkSize = 1024 * 1024 * 180
@@ -52,7 +53,7 @@ class ShuffleServiceImpl(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuf
                     // 따라서 done이 필요함. (Runnable은 동시에 실행되지 않아서 lock은 없어도 됨 (gpt 피셜))
                     while (serverObserver.isReady && !done.get()) {
                         buffer.clear()
-                        val bytesRead = WorkerState.diskIoLock.synchronized {
+                        val bytesRead = GlobalLock.diskIoLock.synchronized {
                             fileChannel.read(buffer)
                         }
                         if (bytesRead == -1) {

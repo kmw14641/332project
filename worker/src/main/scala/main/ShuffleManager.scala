@@ -11,6 +11,7 @@ import utils.FileManager
 import io.grpc.stub.{StreamObserver, ClientCallStreamObserver, ClientResponseObserver}
 import java.nio.channels.FileChannel
 import common.utils.SystemUtils
+import global.GlobalLock
 
 class ShuffleManager(subDirName: String)(implicit ec: ExecutionContext) {
     val maxTries = 10
@@ -76,7 +77,7 @@ class ShuffleManager(subDirName: String)(implicit ec: ExecutionContext) {
             }
 
             override def onNext(response: DownloadResponse): Unit = {
-                WorkerState.diskIoLock.synchronized {
+                GlobalLock.diskIoLock.synchronized {
                     blocking {
                         val writeBuffer = response.data.asReadOnlyByteBuffer()
                         while (writeBuffer.hasRemaining) {
