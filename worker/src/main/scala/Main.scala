@@ -57,11 +57,11 @@ object Main extends App {
   server.start()
 
   val mainWaiting = async {
-    ConnectionManager.initMasterChannel(masterIp, masterPort)
+    // ConnectionManager.initMasterChannel(masterIp, masterPort)
 
-    new RegisterManager().start(server.getPort)
+    // new RegisterManager().start(server.getPort)
 
-    new SampleManager().start()
+    // new SampleManager().start()
 
     val files = await { new MemorySortManager(FileManager.memSortDirName).start }
 

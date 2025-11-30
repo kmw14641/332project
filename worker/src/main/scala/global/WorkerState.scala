@@ -12,6 +12,8 @@ class WorkerState extends Serializable {
   var assignedRange: Option[Map[(String, Int), (Key, Key)]] = None
   var assignedFiles: Map[(String, Int), List[String]] = Map.empty
   var shufflePlans: Map[String, Seq[String]] = Map.empty
+  var memsortCompleted = false
+
   @transient val assignPromise: Promise[Unit] = Promise[Unit]()
   @transient val shuffleStartPromise: Promise[Unit] = Promise[Unit]()
   @transient val terminatePromise: Promise[Unit] = Promise[Unit]()

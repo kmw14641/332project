@@ -5,16 +5,31 @@ import utils.{ThreadpoolUtils, FileManager}
 import scala.concurrent.{Future, ExecutionContext}
 import scala.jdk.CollectionConverters._
 import scala.annotation.tailrec
-import scala.async.Async.async
+import scala.async.Async.{async, await}
 import common.data.Data.{Record, getRecordOrdering, RECORD_SIZE}
 import utils.FileManager
+import global.WorkerState
+import global.StateRestoreManager
 
 class MemorySortManager(subDirName: String) {
   val threadPool = Executors.newFixedThreadPool(ThreadpoolUtils.getThreadCount)
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(threadPool)
 
-  def start = {
-    inMemorySort(ThreadpoolUtils.getChunkSize)
+  def start: Future[List[String]] = async {
+    if (WorkerState.instance.memsortCompleted) {
+      println(s"[MergeSort] In-memory sort already completed in previous run, skipping...")
+      return Future.successful(List[String]())
+    }
+
+    val result = await { inMemorySort(ThreadpoolUtils.getChunkSize) }
+
+    WorkerState.instance.memsortCompleted = true
+    global.StateRestoreManager.storeState()
+    println(s"In-memory sort completed. saved completed as true")
+
+    threadPool.shutdown()
+
+    result
   }
 
   /**
