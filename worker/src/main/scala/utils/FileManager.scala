@@ -24,6 +24,7 @@ object FileManager {
   val labelingDirName = "labeled"
   val shuffleDirName = "shuffled"
   val finalDirName = "final"
+  val stateRestoreDirName = "state"
   private val inputSubDirNames = Set(memSortDirName, fileMergeDirName, labelingDirName, shuffleDirName, finalDirName)
                                   .map(InputSubDir(_))
   private val outputSubDirNames = Set(memSortDirName, fileMergeDirName, labelingDirName, shuffleDirName, finalDirName)
