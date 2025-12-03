@@ -10,6 +10,7 @@ import worker.WorkerService.{FileListMessage, WorkerServiceGrpc}
 import state.LabelingState
 import state.SynchronizationState
 import global.StateRestoreManager
+import common.utils.RetryUtils.retry
 
 class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(implicit ec: ExecutionContext) {
   labeledFiles.foreach {
@@ -66,31 +67,37 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   For each worker, send the file metadata list via gRPC.
   Await all transmissions to complete before returning.
   */
-  private def transmitPlans(plans: Map[(String, Int), Seq[String]], selfIp: String): Future[Unit] = {
-    if (plans.isEmpty) {
+  private def transmitPlans(plans: Map[(String, Int), Seq[String]], selfIp: String): Future[Unit] = async {
+    if (SynchronizationState.isTransmitCompleted) {
+      println("[StateRestore] Skip transmitPlans")
+      ()
+    } else if (plans.isEmpty) {
       println("[Sync] No outgoing files to report.")
-      Future.successful(())
+      ()
     } 
     else {
       val sendFutures = plans.toSeq.map { case ((ip, port), files) =>
-        val fileNames = files.mkString(", ")
-        println(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
+        retry {
+          async {
+            val fileNames = files.mkString(", ")
+            println(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
 
-        val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
-        val request = FileListMessage(
-          senderIp = selfIp,
-          files = files
-        )
+            val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+            val request = FileListMessage(
+              senderIp = selfIp,
+              files = files
+            )
 
-        stub.deliverFileList(request).andThen {
-          case Success(_) =>
+            await { stub.deliverFileList(request) }
             println(s"[Sync] Delivered ${files.size} file descriptors to $ip:$port")
-          case Failure(e) =>
-            println(s"[Sync] Error delivering file descriptors to $ip:$port: ${e.getMessage}")
+          }
         }
       }
 
-      Future.sequence(sendFutures).map(_ => ())
+      await { Future.sequence(sendFutures) }
+
+      SynchronizationState.completeTransmit()
+      StateRestoreManager.storeState()
     }
   }
 
