@@ -28,7 +28,7 @@ object ConnectionManager {
         }
     }
 
-    def setWorkerChannel(ip: String, port: Int): Unit = this.synchronized {
+    def replaceWorkerChannel(ip: String, port: Int): Unit = this.synchronized {
         getWorkerChannel(ip).shutdown()
         workerChannels(ip) = createChannel(ip, port)
     }
