@@ -18,7 +18,7 @@ object StateRestoreManager {
 
         val oos = new ObjectOutputStream(new FileOutputStream(filePath))
         try {
-            val instance = WorkerState.getInstance
+            val instance = WorkerState.synchronized { WorkerState.instance }
             oos.writeObject(instance)
         } finally {
             oos.close()
@@ -31,7 +31,7 @@ object StateRestoreManager {
         val ois = new ObjectInputStream(new FileInputStream(filePath))
         try {
             val instance = ois.readObject().asInstanceOf[WorkerState]
-            WorkerState.setInstance(instance)
+            WorkerState.synchronized { WorkerState.instance = instance }
         } finally {
             ois.close()
         }

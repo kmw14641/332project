@@ -16,6 +16,7 @@ import utils.WorkerOptionUtils
 import utils.FileManager
 import shuffle.Shuffle.ShuffleGrpc
 import global.StateRestoreManager
+import state.SampleState
 
 object Main extends App {
   implicit val ec: ExecutionContext = ExecutionContext.global
@@ -65,12 +66,12 @@ object Main extends App {
     val files = await { new MemorySortManager(FileManager.memSortDirName).start }
 
     val (_, sortedFiles) = await {
-      WorkerState.waitForAssignment.zip(
+      SampleState.waitForAssignment.zip(
         new FileMergeManager(FileManager.memSortDirName, FileManager.fileMergeDirName).start(files)
       )
     }
 
-    val assignedRange = WorkerState.getAssignedRange.getOrElse(throw new RuntimeException("Assigned range is not available"))
+    val assignedRange = SampleState.getAssignedRange.getOrElse(throw new RuntimeException("Assigned range is not available"))
 
     val labeledFiles = await { new LabelingManager(FileManager.fileMergeDirName, FileManager.labelingDirName, assignedRange).start(sortedFiles) }
 

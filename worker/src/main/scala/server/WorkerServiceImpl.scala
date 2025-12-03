@@ -6,6 +6,9 @@ import io.grpc.{Status, StatusException}
 import java.math.BigInteger
 import global.WorkerState
 import global.ConnectionManager
+import state.SampleState
+import state.SynchronizationState
+import state.TerminationState
 
 class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc.WorkerService {
   override def assignRanges(request: WorkersRangeAssignment): Future[AssignRangesResponse] = {
@@ -23,7 +26,8 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
     }.toMap
 
     // Store the assigned range in the Worker singleton
-    WorkerState.setAssignedRange(workersRangeAssignment)
+    SampleState.setAssignedRange(workersRangeAssignment)
+    SampleState.markAssigned()
 
     ConnectionManager.initWorkerChannels(workersRangeAssignment.keys.toSeq)
 
@@ -49,7 +53,7 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
   override def deliverFileList(request: FileListMessage): Future[FileListAck] = Future {
     val senderIp = request.senderIp    
     val files = request.files
-    WorkerState.addShufflePlan(senderIp, files)
+    SynchronizationState.addShufflePlan(senderIp, files)
 
     // for debugging
     val fileNames = files.mkString(", ")
@@ -60,20 +64,20 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
   }
 
   override def startShuffle(request: StartShuffleCommand): Future[StartShuffleAck] = {
-    if (!WorkerState.hasReceivedShuffleCommand) {
+    if (!SynchronizationState.hasReceivedShuffleCommand) {
       println(s"Received shuffle start command. Reason: ${request.reason}")
     }
     /*
     By marking shuffleStartPromise to success, 
     unblock any waiting synchronization manager.
     */ 
-    WorkerState.markShuffleStarted()
+    SynchronizationState.markShuffleStarted()
 
     Future.successful(StartShuffleAck(success = true))
   }
 
   override def terminate(request: TerminateCommand): Future[TerminateAck] = Future {
-    WorkerState.markTerminated()
+    TerminationState.markTerminated()
     TerminateAck(success = true)
   }
 }
