@@ -31,6 +31,7 @@ object StateRestoreManager {
         val ois = new ObjectInputStream(new FileInputStream(filePath))
         try {
             val instance = ois.readObject().asInstanceOf[WorkerState]
+            instance.states.foreach(_.restoreTransient())
             WorkerState.synchronized { WorkerState.instance = instance }
         } finally {
             ois.close()

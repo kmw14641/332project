@@ -5,6 +5,10 @@ import common.data.Data.Key
 import com.google.protobuf.ByteString
 import state.{SampleState, LabelingState, SynchronizationState, TerminationState}
 
+trait Restorable {
+  def restoreTransient(): Unit
+}
+
 // get lock on WorkerState when access any data!
 
 class WorkerState extends Serializable {
@@ -12,6 +16,8 @@ class WorkerState extends Serializable {
   val labeling: LabelingState = new LabelingState()
   val synchronization: SynchronizationState = new SynchronizationState()
   val termination: TerminationState = new TerminationState()
+
+  def states: Seq[Restorable] = Seq(sample, labeling, synchronization, termination)
 }
 
 object WorkerState {
