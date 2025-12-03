@@ -9,6 +9,7 @@ import global.ConnectionManager
 import state.SampleState
 import state.SynchronizationState
 import state.TerminationState
+import global.StateRestoreManager
 
 class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc.WorkerService {
   override def assignRanges(request: WorkersRangeAssignment): Future[AssignRangesResponse] = {
@@ -27,6 +28,7 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
 
     // Store the assigned range in the Worker singleton
     SampleState.setAssignedRange(workersRangeAssignment)
+    StateRestoreManager.storeState()
     SampleState.markAssigned()
 
     ConnectionManager.initWorkerChannels(workersRangeAssignment.keys.toSeq)

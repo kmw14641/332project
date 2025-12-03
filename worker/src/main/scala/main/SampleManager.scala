@@ -25,6 +25,9 @@ import master.MasterService.{SamplingServiceGrpc, SampleData}
 import master.MasterService.SampleData
 import global.ConnectionManager
 import utils.FileManager
+import global.StateRestoreManager
+import global.WorkerState
+import state.SampleState
 
 class SampleManager(implicit ec: ExecutionContext) {
   private val stub = SamplingServiceGrpc.stub(ConnectionManager.getMasterChannel())
@@ -32,25 +35,32 @@ class SampleManager(implicit ec: ExecutionContext) {
   val THREAD_NUM = Math.min(8, SystemUtils.getProcessorNum)
 
   def start(): Future[Unit] = async {
-    val workerIp = SystemUtils.getLocalIp.getOrElse {
-      println("Failed to get local IP address")
-      sys.exit(1)
+    if (SampleState.isSendSampleCompleted) {
+      println("[StateRestore] Skip send sample")
     }
+    else {
+      val workerIp = SystemUtils.getLocalIp.getOrElse {
+        println("Failed to get local IP address")
+        sys.exit(1)
+      }
 
-    val samples = await { sampleFromInputs }
-  
-    val request = SampleData(
-      workerIp = workerIp,
-      keys = samples
-    )
+      val samples = await { sampleFromInputs }
+    
+      val request = SampleData(
+        workerIp = workerIp,
+        keys = samples
+      )
 
-    val responseFuture = stub.sampling(request)
-    val success = await { responseFuture }.success
-  
-    if (success) {
-      println("Samples sent successfully. Waiting for range assignment...")
-    } else {
-      println("Failed to send samples to master")
+      val responseFuture = stub.sampling(request)
+      val success = await { responseFuture }.success
+    
+      if (success) {
+        println("Samples sent successfully. Waiting for range assignment...")
+        SampleState.completeSendSample()
+        StateRestoreManager.storeState()
+      } else {
+        println("Failed to send samples to master")
+      }
     }
   }
 
