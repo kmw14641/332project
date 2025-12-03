@@ -1,36 +1,31 @@
 package main
 
-import java.nio.file.{Files, Paths, StandardOpenOption, StandardCopyOption}
+import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.nio.channels.FileChannel
 import java.nio.ByteBuffer
 import com.google.protobuf.ByteString
 import common.utils.SystemUtils
-import utils.RecordIOUtils
+import utils.FileManager
 import scala.annotation.tailrec
-import utils.PathUtils
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async.async
-import common.data.Data.{Key, Record, getRecordOrdering, getKeyOrdering, RECORD_SIZE, KEY_SIZE, VALUE_SIZE}
-import global.WorkerState
+import common.data.Data.{Key, Record, getRecordOrdering, getKeyOrdering, RECORD_SIZE, KEY_SIZE}
 
-class LabelingManager(sortedFiles: List[String], assignedRange: Map[(String, Int), Record], outputDir: String)(implicit ec: ExecutionContext) {
-  def start = {
-    val labelingDir = Paths.get(outputDir, WorkerState.labelingDirName).toString
-    PathUtils.createDirectoryIfNotExists(labelingDir)
-
-    assignFilesToWorkers(labelingDir)
+class LabelingManager(subDirName: String, assignedRange: Map[(String, Int), (Key, Key)])(implicit ec: ExecutionContext) {
+  def start(files: List[String]) = {
+    assignFilesToWorkers(files)
   }
 
   /**
    * Assign sorted files to workers based on assigned ranges
    * 
-   * @param sortedFiles List of sorted file paths in order
+   * @param files List of sorted file paths in order
    * @param assignedRange Map of (workerIp, workerPort) -> (startKey, endKey)
    * @param outputDir Directory to write assigned files
    * @return Map of (workerIp, workerPort) -> List[filePath]
    */
-  private def assignFilesToWorkers(labelingDir: String): Future[Map[(String, Int), List[String]]] = async {
-    println(s"[FileAssignment] Starting file assignment with ${sortedFiles.size} sorted files")
+  private def assignFilesToWorkers(files: List[String]): Future[Map[(String, Int), List[String]]] = async {
+    println(s"[FileAssignment] Starting file assignment with ${files.size} sorted files")
     
     // Sort workers by start key
     implicit val cp = getRecordOrdering
@@ -42,9 +37,10 @@ class LabelingManager(sortedFiles: List[String], assignedRange: Map[(String, Int
     }
     
     // Get file metadata (filename, startKey, endKey) in sorted order
-    val fileMetadata = sortedFiles.map { filePath =>
+    val fileMetadata = files.map { filename =>
+      val filePath = FileManager.getPhysicalFilePath(filename)
       val (firstKey, lastKey) = getFirstAndLastKeyFromFile(filePath)
-      (filePath, firstKey, lastKey)
+      (filename, firstKey, lastKey)
     }
     
     val from = SystemUtils.getLocalIp.getOrElse(throw new IllegalStateException("Could not determine local IP address"))
@@ -60,9 +56,9 @@ class LabelingManager(sortedFiles: List[String], assignedRange: Map[(String, Int
     ): (List[(String, Key, Key)], Map[(String, Int), List[String]]) = {
       files match {
         case Nil => (Nil, assignments)
-        case (currentFile @ (filePath, fileStartKey, fileEndKey)) :: restFiles =>
+        case (currentFile @ (filename, fileStartKey, fileEndKey)) :: restFiles =>
           val (workerIp, _) = workerId
-          println(s"[FileAssignment]   Checking file: $filePath")
+          println(s"[FileAssignment]   Checking file: $filename")
           
           // Check if file's end key is within [rangeStart, rangeEnd)
           val fileEndInRange = comparator.compare(fileEndKey, rangeStart) >= 0 && 
@@ -71,13 +67,12 @@ class LabelingManager(sortedFiles: List[String], assignedRange: Map[(String, Int
           if (fileEndInRange) {
             // Entire file belongs to this worker - just rename
             val fileNum = assignments.getOrElse(workerId, List.empty).size
-            val newFileName = s"$from-$workerIp-$fileNum"
-            val newFilePath = Paths.get(labelingDir, newFileName)
+            val newFilename = s"$from-$workerIp-$fileNum"
             
-            Files.move(Paths.get(filePath), newFilePath, StandardCopyOption.REPLACE_EXISTING)
-            println(s"[FileAssignment]   ✓ Renamed entire file to: $newFileName")
+            FileManager.move(filename, newFilename, subDirName)
+            println(s"[FileAssignment]   ✓ Renamed entire file to: $newFilename")
             
-            val newAssignments = assignments.updated(workerId, newFilePath.toString :: assignments.getOrElse(workerId, List.empty))
+            val newAssignments = assignments.updated(workerId, newFilename :: assignments.getOrElse(workerId, List.empty))
             
             processFiles(workerId, rangeStart, rangeEnd, restFiles, newAssignments)
             
@@ -92,7 +87,9 @@ class LabelingManager(sortedFiles: List[String], assignedRange: Map[(String, Int
               println(s"[FileAssignment]   Splitting file at rangeEnd...")
               
               // Load file into memory and find split point
-              val records = RecordIOUtils.readAllRecords(filePath)
+              val filePath = FileManager.getPhysicalFilePath(filename)
+              val count = FileManager.getFilesize(filePath) / RECORD_SIZE
+              val records = FileManager.readRecords(filePath, 0, count.toInt)
               val splitIndex = findSplitIndex(records, rangeEnd)
               
               // Split into two parts
@@ -101,27 +98,25 @@ class LabelingManager(sortedFiles: List[String], assignedRange: Map[(String, Int
               
               // Part 1: belongs to current worker
               val fileNum = assignments.getOrElse(workerId, List.empty).size
-              val part1FileName = s"$from-$workerIp-$fileNum"
-              val part1FilePath = Paths.get(labelingDir, part1FileName)
-              RecordIOUtils.writeRecords(part1FilePath.toString, part1Records)
-              println(s"[FileAssignment]   ✓ Created part1: $part1FileName (${part1Records.length} records)")
+              val newFilename = s"$from-$workerIp-$fileNum"
+              FileManager.createAndRegister(subDirName, Some(newFilename))
+              FileManager.writeRecords(subDirName, part1Records, Some(newFilename))
+              println(s"[FileAssignment]   ✓ Created part1: $newFilename (${part1Records.length} records)")
               
-              val newAssignments = assignments.updated(workerId, part1FilePath.toString :: assignments.getOrElse(workerId, List.empty))
+              val newAssignments = assignments.updated(workerId, newFilename :: assignments.getOrElse(workerId, List.empty))
               
               // Part 2: push back to front of deque for next worker
-              val tempFileName = Files.createTempFile(Paths.get(labelingDir), "temp-", ".part").getFileName.toString
-              val part2FilePath = Paths.get(labelingDir, tempFileName)
-              RecordIOUtils.writeRecords(part2FilePath.toString, part2Records)
+              val remainingFilename = FileManager.writeRecords(subDirName, part2Records)
               
-              val part2StartKey = part2Records.head._1
-              val part2EndKey = part2Records.last._1
-              println(s"[FileAssignment]   ✓ Created part2: $tempFileName (${part2Records.length} records) - pushed to front")
+              val remainingStartKey = part2Records.head._1
+              val remainingEndKey = part2Records.last._1
+              println(s"[FileAssignment]   ✓ Created part2: $remainingFilename (${part2Records.length} records) - pushed to front")
               
               // Delete original file
-              Files.deleteIfExists(Paths.get(filePath))
+              FileManager.delete(filename)
               
               // Return remaining files with part2 prepended, and stop processing for this worker
-              ((part2FilePath.toString, part2StartKey, part2EndKey) :: restFiles, newAssignments)
+              ((remainingFilename, remainingStartKey, remainingEndKey) :: restFiles, newAssignments)
               
             } else {
               // File is completely beyond this worker's range

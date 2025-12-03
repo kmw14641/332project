@@ -1,35 +1,29 @@
 package main
 
-import java.nio.file.{Files, Paths, StandardOpenOption}
 import java.util.concurrent.{Executors, ConcurrentLinkedQueue}
-import utils.{PathUtils, RecordIOUtils, ThreadpoolUtils}
+import utils.{ThreadpoolUtils, FileManager}
 import scala.concurrent.{Future, ExecutionContext}
 import scala.jdk.CollectionConverters._
-import java.util.concurrent.atomic.AtomicInteger
 import scala.annotation.tailrec
-import utils.PathUtils
 import scala.async.Async.async
-import common.data.Data.{Record, getRecordOrdering, RECORD_SIZE, KEY_SIZE, VALUE_SIZE}
-import global.WorkerState
+import common.data.Data.{Record, getRecordOrdering, RECORD_SIZE}
+import utils.FileManager
 
-class MemorySortManager(inputDirs: Seq[String], outputDir: String) {
+class MemorySortManager(subDirName: String) {
   val threadPool = Executors.newFixedThreadPool(ThreadpoolUtils.getThreadCount)
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(threadPool)
 
   def start = {
-    inMemorySort(sortedDir, ThreadpoolUtils.getChunkSize)
+    inMemorySort(ThreadpoolUtils.getChunkSize)
   }
+
   /**
    * In-memory sort of all input files
    * Split files into chunks if they exceed chunk size
    */
-  private def inMemorySort(sortedDir: String, chunkSize: Long): Future[List[String]] = {
+  private def inMemorySort(chunkSize: Long): Future[List[String]] = {
     // Collect all input files
-    val allFiles = inputDirs.flatMap { dirPath =>
-      PathUtils.getFilesList(dirPath).filter { filePath =>
-        Files.isRegularFile(Paths.get(filePath)) && Files.size(Paths.get(filePath)) >= RECORD_SIZE
-      }
-    }
+    val allFiles = FileManager.getInputFilePathes
     
     println(s"[MergeSort] Found ${allFiles.size} input files to sort")
     
@@ -38,12 +32,10 @@ class MemorySortManager(inputDirs: Seq[String], outputDir: String) {
     
     val sortedFiles = new ConcurrentLinkedQueue[String]()
     
-    val fileId = new AtomicInteger(0)
     val futures = allFiles.map { filePath =>
       async {
         val threadId = Thread.currentThread().getName
-        val file = Paths.get(filePath)
-        val fileSize = Files.size(file)
+        val fileSize = FileManager.getFilesize(filePath)
         val numRecords = fileSize / RECORD_SIZE
         
         println(s"[MergeSort-InMemory][$threadId] Processing file: $filePath (${numRecords} records)")
@@ -56,16 +48,15 @@ class MemorySortManager(inputDirs: Seq[String], outputDir: String) {
             val currentChunk = chunkCount + 1
             
             println(s"[MergeSort-InMemory][$threadId] Reading chunk $currentChunk: $recordsToRead records from offset $offset")
-            val records = RecordIOUtils.readRecords(filePath, offset, recordsToRead)
+            val records = FileManager.readRecords(filePath, offset, recordsToRead)
             
             println(s"[MergeSort-InMemory][$threadId] Sorting chunk $currentChunk...")
             implicit val ordering = getRecordOrdering
             val sortedRecords = records.sorted
             
-            val outputPath = s"$sortedDir/${fileId.incrementAndGet()}.bin"
-            println(s"[MergeSort-InMemory][$threadId] Writing sorted chunk to: $outputPath")
-            RecordIOUtils.writeRecords(outputPath, sortedRecords)
-            sortedFiles.add(outputPath)
+            val outputFilename = FileManager.writeRecords(subDirName, sortedRecords)
+            println(s"[MergeSort-InMemory][$threadId] Writing sorted chunk to: $outputFilename")
+            sortedFiles.add(outputFilename)
             
             processChunks(offset + recordsToRead, currentChunk)
           } else {
@@ -81,10 +72,7 @@ class MemorySortManager(inputDirs: Seq[String], outputDir: String) {
     .map {
       case _ => 
         threadPool.shutdown()
-        sortedFiles.asScala.toList.sortBy { path =>
-          val name = Paths.get(path).getFileName.toString
-          name.stripSuffix(".bin").toInt
-        }
+        sortedFiles.asScala.toList
     }
   }
 }

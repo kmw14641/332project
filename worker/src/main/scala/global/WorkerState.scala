@@ -6,11 +6,6 @@ import com.google.protobuf.ByteString
 
 // Worker Singleton
 object WorkerState {
-  val memSortDirName = "sorted"
-  val fileMergeDirName = "merged"
-  val labelingDirName = "labeled"
-  val shuffleDirName = "shuffled"
-
   val diskIoLock = new Object()
 
   private var masterIp: Option[String] = None
