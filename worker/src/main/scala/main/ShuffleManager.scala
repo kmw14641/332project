@@ -12,6 +12,7 @@ import io.grpc.stub.{StreamObserver, ClientCallStreamObserver, ClientResponseObs
 import java.nio.channels.FileChannel
 import common.utils.SystemUtils
 import global.GlobalLock
+import common.utils.RetryUtils.retry
 import utils.FileManager.{InputSubDir, OutputSubDir}
 
 class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit ec: ExecutionContext) {
@@ -45,7 +46,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
             case Nil => ()
             case head :: tail => {
                 println(s"Processing file [$workerIp, $head]")
-                await { processFileWithRetry(workerIp, head) }
+                await { retry { processFile(workerIp, head) } }
                 await { processFilesSequentially(workerIp, tail) }
             }
         }
@@ -115,15 +116,5 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
         }
 
         promise.future
-    }
-
-    private def processFileWithRetry(workerIp: String, filename: String, tries: Int = 1): Future[Unit] = {
-        processFile(workerIp, filename).recoverWith {
-            case _ if tries < maxTries => {  // 방금 시도한게 n번째 시도이면 더이상 시도하지 않음
-                println(s"Retrying [$workerIp, $filename], attempt #$tries")
-                blocking { Thread.sleep(math.pow(2, tries).toLong * 1000) }
-                processFileWithRetry(workerIp, filename, tries + 1)
-            }
-        }
     }
 }
