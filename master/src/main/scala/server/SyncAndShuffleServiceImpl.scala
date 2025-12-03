@@ -4,6 +4,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{SyncPhaseReport, SyncPhaseAck, SyncAndShuffleServiceGrpc}
 import global.{MasterState, ConnectionManager}
 import worker.WorkerService.{WorkerServiceGrpc, StartShuffleCommand}
+import scala.async.Async.{async, await}
+import common.utils.RetryUtils.retry
 
 class SyncAndShuffleServiceImpl(implicit ec: ExecutionContext) extends SyncAndShuffleServiceGrpc.SyncAndShuffleService {
   override def reportSyncCompletion(request: SyncPhaseReport): Future[SyncPhaseAck] = {
@@ -30,12 +32,12 @@ class SyncAndShuffleServiceImpl(implicit ec: ExecutionContext) extends SyncAndSh
 
     val workers = MasterState.getRegisteredWorkers
     workers.foreach { case (ip, info) =>
-      val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
-      val request = StartShuffleCommand(reason = "Shuffle phase start")
-      stub.startShuffle(request).map(_.success).recover {
-        case e: Exception =>
-          println(s"Failed to send shuffle start command to worker $ip:${info.port}: ${e.getMessage}")
-          false
+      retry {
+        async {
+          val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+          val request = StartShuffleCommand(reason = "Shuffle phase start")
+          await { stub.startShuffle(request) }
+        }
       }
     }
   }

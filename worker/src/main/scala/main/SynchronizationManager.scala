@@ -9,6 +9,7 @@ import scala.util.{Failure, Success}
 import worker.WorkerService.{FileListMessage, WorkerServiceGrpc}
 import state.LabelingState
 import state.SynchronizationState
+import global.StateRestoreManager
 
 class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(implicit ec: ExecutionContext) {
   labeledFiles.foreach {
@@ -94,12 +95,20 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   }
 
   private def notifyMasterOfCompletion(workerIp: String): Future[Unit] = async {
-    val request = SyncPhaseReport(workerIp = workerIp)
-    await {masterStub.reportSyncCompletion(request).andThen {
-      case Success(_) =>
-        println("[Sync] Synchronization completed. Waiting for master's shuffle command...")
-      case Failure(e) =>
-        println(s"[Sync] Failed to report synchronization completion: ${e.getMessage}")
+    if (SynchronizationState.isReportCompleted) {
+      println("[StateRestore] Skip synchronization report")
+      ()
+    }
+    else {
+      val request = SyncPhaseReport(workerIp = workerIp)
+      await {masterStub.reportSyncCompletion(request).andThen {
+        case Success(_) =>
+          println("[Sync] Synchronization completed. Waiting for master's shuffle command...")
+          SynchronizationState.completeReport()
+          StateRestoreManager.storeState()
+        case Failure(e) =>
+          println(s"[Sync] Failed to report synchronization completion: ${e.getMessage}")
+        }
       }
     }
   }

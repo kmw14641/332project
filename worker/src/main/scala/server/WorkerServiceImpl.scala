@@ -73,6 +73,8 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
     By marking shuffleStartPromise to success, 
     unblock any waiting synchronization manager.
     */ 
+    SynchronizationState.setShuffleStarted(true)
+    StateRestoreManager.storeState()
     SynchronizationState.markShuffleStarted()
 
     Future.successful(StartShuffleAck(success = true))
