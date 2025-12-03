@@ -53,7 +53,7 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
   override def deliverFileList(request: FileListMessage): Future[FileListAck] = Future {
     val senderIp = request.senderIp    
     val files = request.files
-    SynchronizationState.addShufflePlan(senderIp, files)
+    SynchronizationState.setShufflePlan(senderIp, files)
 
     // for debugging
     val fileNames = files.mkString(", ")

@@ -22,9 +22,8 @@ object SynchronizationState {
   def waitForShuffleCommand: Future[Unit] = WorkerState.synchronization.shuffleStartPromise.future
   def hasReceivedShuffleCommand: Boolean = WorkerState.synchronization.shuffleStartPromise.isCompleted
 
-  def addShufflePlan(senderIp: String, files: Seq[String]): Unit = WorkerState.synchronized {
-    val existing = WorkerState.synchronization.shufflePlans.getOrElse(senderIp, Seq.empty)
-    WorkerState.synchronization.shufflePlans += senderIp -> (existing ++ files)
+  def setShufflePlan(senderIp: String, files: Seq[String]): Unit = WorkerState.synchronized {
+    WorkerState.synchronization.shufflePlans += senderIp -> files
   }
 
   def getShufflePlans: Map[String, Seq[String]] = WorkerState.synchronized {
