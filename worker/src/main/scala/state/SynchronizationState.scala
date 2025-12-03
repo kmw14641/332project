@@ -10,7 +10,7 @@ class SynchronizationState extends Serializable with Restorable {
   private var transmitCompleted: Boolean = false
   private var reportCompleted: Boolean = false
   private var shuffleStarted: Boolean = false
-  @transient private val shuffleStartPromise: Promise[Unit] = Promise[Unit]()
+  @transient private lazy val shuffleStartPromise: Promise[Unit] = Promise[Unit]()
 
   def restoreTransient(): Unit = {
     if (shuffleStarted) shuffleStartPromise.trySuccess()

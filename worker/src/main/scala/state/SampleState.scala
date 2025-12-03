@@ -9,7 +9,7 @@ import global.Restorable
 class SampleState extends Serializable with Restorable {
   private var sendSampleCompleted = false
   private var assignedRange: Option[Map[(String, Int), (Key, Key)]] = None
-  @transient private val assignPromise: Promise[Unit] = Promise[Unit]()
+  @transient private lazy val assignPromise: Promise[Unit] = Promise[Unit]()
 
   def restoreTransient(): Unit = {
     assignedRange.foreach(_ => assignPromise.trySuccess())
