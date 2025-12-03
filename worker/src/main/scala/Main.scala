@@ -40,7 +40,7 @@ object Main extends App {
 
   FileManager.createDirectoryIfNotExists(outputDir)
 
-  WorkerState.setMasterAddr(masterIp, masterPort)
+  ConnectionManager.initMasterChannel(masterIp, masterPort)
   FileManager.setInputDirs(inputDirs)
   FileManager.setOutputDir(outputDir)
 
@@ -58,8 +58,6 @@ object Main extends App {
   server.start()
 
   val mainWaiting = async {
-    ConnectionManager.initMasterChannel(masterIp, masterPort)
-
     new RegisterManager().start(server.getPort)
 
     new SampleManager().start()

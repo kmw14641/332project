@@ -5,8 +5,6 @@ import common.data.Data.Key
 import com.google.protobuf.ByteString
 
 class WorkerState extends Serializable {
-  var masterIp: Option[String] = None
-  var masterPort: Option[Int] = None
   var assignedRange: Option[Map[(String, Int), (Key, Key)]] = None
   var assignedFiles: Map[(String, Int), List[String]] = Map.empty
   var shufflePlans: Map[String, Seq[String]] = Map.empty
@@ -24,18 +22,6 @@ object WorkerState {
 
   def getInstance: WorkerState = this.synchronized {
     instance
-  }
-
-  def setMasterAddr(ip: String, port: Int): Unit = this.synchronized {
-    instance.masterIp = Some(ip)
-    instance.masterPort = Some(port)
-  }
-
-  def getMasterAddr: Option[(String, Int)] = this.synchronized {
-    for {
-      ip <- instance.masterIp
-      port <- instance.masterPort
-    } yield (ip, port)
   }
 
   def setAssignedRange(assignments: Map[(String, Int), (Key, Key)]): Unit = this.synchronized {
