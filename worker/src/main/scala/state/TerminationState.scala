@@ -6,7 +6,7 @@ import global.WorkerState
 import global.Restorable
 
 class TerminationState extends Serializable with Restorable {
-  @transient private val terminatePromise: Promise[Unit] = Promise[Unit]()
+  @transient private lazy val terminatePromise: Promise[Unit] = Promise[Unit]()
 
   def restoreTransient(): Unit = {}
 }
