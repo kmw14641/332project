@@ -11,6 +11,7 @@ object MasterState {
   private var workersNum: Int = -1
   private var registeredWorkers = Map[String, WorkerInfo]()
   private var samples = Map[String, Seq[Key]]()  // workerIp -> sampled keys
+  private var calculateRangesStarted = false
   private var ranges = Map[(String, Int), Record]()  // (start, end) for each worker
   private var syncCompletedWorkers = Set[String]()
   private var shuffleStarted = false
@@ -62,6 +63,14 @@ object MasterState {
   }
 
   def getSampleSize: Int = this.synchronized { samples.size }
+
+  def tryStartCalculateRanges(): Boolean = this.synchronized {
+    if (calculateRangesStarted) false
+    else {
+      calculateRangesStarted = true
+      true
+    }
+  }
 
   def calculateRanges(): Unit = this.synchronized {
     implicit val ordering = getKeyOrdering

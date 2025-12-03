@@ -6,6 +6,7 @@ import scala.async.Async.{async, await}
 import master.MasterService.{SampleData, SampleResponse, SamplingServiceGrpc}
 import global.{MasterState, ConnectionManager}
 import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, WorkerRangeAssignment, WorkerNetworkInfo, RangeAssignment}
+import common.utils.RetryUtils.retry
 
 class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingServiceGrpc.SamplingService {
   override def sampling(request: SampleData): Future[SampleResponse] = {
@@ -13,7 +14,7 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
     val success = MasterState.addSamples(request.workerIp, keys)
 
     // If all workers have sent samples, spawn a thread to calculate ranges and assign them
-    if (MasterState.getSampleSize == MasterState.getWorkersNum && success) {
+    if (MasterState.getSampleSize == MasterState.getWorkersNum && success && MasterState.tryStartCalculateRanges()) {
       Future {
         MasterState.calculateRanges()
         if (MasterState.isRangesReady) {
@@ -43,13 +44,11 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
     )
     
     for ((ip, info) <- workers) {
-      async {
-        val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
-        val response = await(stub.assignRanges(request))
-        response.success
-      }.recover { case e =>
-        println(s"Failed to assign range to worker $ip:${info.port}: ${e.getMessage}")
-        false
+      retry {
+        async {
+          val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+          await { stub.assignRanges(request) }
+        }
       }
     }
   }
