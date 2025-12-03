@@ -7,6 +7,7 @@ import master.MasterService.{FinalMergeServiceGrpc, FinalMergePhaseReport}
 import scala.async.Async.{async, await}
 import common.utils.SystemUtils
 import io.grpc.Server
+import state.TerminationState
 
 class TerminationManager(implicit ec: ExecutionContext) {
   private val masterStub = FinalMergeServiceGrpc.stub(ConnectionManager.getMasterChannel())
@@ -14,7 +15,7 @@ class TerminationManager(implicit ec: ExecutionContext) {
   def shutdownServerSafely(server: Server): Future[Unit] = async {
     val request = FinalMergePhaseReport(workerIp = SystemUtils.getLocalIp.get)
     await { masterStub.reportFinalMergeCompletion(request) }
-    await { global.WorkerState.waitForTerminate }
+    await { TerminationState.waitForTerminate }
 
     ConnectionManager.shutdownAllChannels()
     server.shutdown()
