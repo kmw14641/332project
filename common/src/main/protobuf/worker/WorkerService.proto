@@ -15,6 +15,9 @@ service WorkerService {
 
   // Master notifies workers to terminate
   rpc Terminate (TerminateCommand) returns (TerminateAck) {}
+
+  // Master introduces new worker port
+  rpc IntroduceNewWorker (WorkerNetworkInfo) returns (IntroduceAck) {}
 }
 
 message WorkerNetworkInfo {
@@ -64,5 +67,9 @@ message TerminateCommand {
 }
 
 message TerminateAck {
+  bool success = 1;
+}
+
+message IntroduceAck {
   bool success = 1;
 }
