@@ -104,10 +104,10 @@ object Main extends App {
     FileManager.mergeAllFiles(s"$outputDir/sorted.bin", finalFiles, FileManager.finalDirName)
     println(s"[Completed] Final output file: ${s"$outputDir/sorted.bin"}")
 
+    await { new TerminationManager().shutdownServerSafely(server) }
+
     FileManager.deleteAll(finalFiles)
     FileManager.deleteAllSubDir
-
-    await { new TerminationManager().shutdownServerSafely(server) }
 
     StateRestoreManager.clear()
   }
