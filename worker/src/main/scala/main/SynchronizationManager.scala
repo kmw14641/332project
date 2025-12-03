@@ -92,19 +92,13 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   }
 
   private def notifyMasterOfCompletion(workerIp: String): Future[Unit] = async {
-    WorkerState.getMasterAddr match {
-      case Some(_) =>
-        val request = SyncPhaseReport(workerIp = workerIp)
-        await {masterStub.reportSyncCompletion(request).andThen {
-          case Success(_) =>
-            println("[Sync] Synchronization completed. Waiting for master's shuffle command...")
-          case Failure(e) =>
-            println(s"[Sync] Failed to report synchronization completion: ${e.getMessage}")
-          }
-        }
-
-      case None =>
-        throw new IllegalStateException("[Sync] Master address is unknown. Unable to report synchronization completion.")
+    val request = SyncPhaseReport(workerIp = workerIp)
+    await {masterStub.reportSyncCompletion(request).andThen {
+      case Success(_) =>
+        println("[Sync] Synchronization completed. Waiting for master's shuffle command...")
+      case Failure(e) =>
+        println(s"[Sync] Failed to report synchronization completion: ${e.getMessage}")
+      }
     }
   }
 }
