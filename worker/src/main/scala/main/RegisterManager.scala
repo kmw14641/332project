@@ -8,11 +8,12 @@ import common.utils.SystemUtils
 import master.MasterService.WorkerInfo
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.async.Async.{async, await}
 
 class RegisterManager(implicit ec: ExecutionContext) {
   private val stub = RegisterServiceGrpc.stub(ConnectionManager.getMasterChannel())
 
-  def start(port: Int): Unit = {
+  def start(port: Int): Future[Unit] = async {
     val workerIp = SystemUtils.getLocalIp.getOrElse {
         println("Failed to get local IP address")
         sys.exit(1)
@@ -25,18 +26,8 @@ class RegisterManager(implicit ec: ExecutionContext) {
       ramMb = ramMb
     )
 
-    val responseFuture = stub.registerWorker(request)
-    
-    try {
-      val response = Await.result(responseFuture, 10.seconds)
-      if (!response.success) {
-        println(s"Failed to connect to master")
-        sys.exit(1)
-      }
-    } catch {
-      case e: Exception =>
-        println(s"Error registering with master: ${e.getMessage}")
-        sys.exit(1)
-    }
+    await { stub.registerWorker(request) }
+
+    ()
   }
 }
