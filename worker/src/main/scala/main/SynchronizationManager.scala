@@ -45,7 +45,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
       .find { case ((ip, _), _) => ip == selfIp }
       .map(_._2)
       .getOrElse(Nil)
-    SynchronizationState.addShufflePlan(selfIp, localFiles)
+    SynchronizationState.setShufflePlan(selfIp, localFiles)
   }
 
   /*
