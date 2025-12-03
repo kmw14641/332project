@@ -16,6 +16,7 @@ import utils.WorkerOptionUtils
 import utils.FileManager
 import shuffle.Shuffle.ShuffleGrpc
 import global.StateRestoreManager
+import scala.concurrent.Future
 import state.SampleState
 
 object Main extends App {
@@ -59,17 +60,23 @@ object Main extends App {
   server.start()
 
   val mainWaiting = async {
-    new RegisterManager().start(server.getPort)
+    val masterFuture = async {
+      await { new RegisterManager().start(server.getPort) }
 
-    new SampleManager().start()
+      await { new SampleManager().start() }
 
-    val files = await { new MemorySortManager(FileManager.memSortDirName).start }
-
-    val (_, sortedFiles) = await {
-      SampleState.waitForAssignment.zip(
-        new FileMergeManager(FileManager.memSortDirName, FileManager.fileMergeDirName).start(files)
-      )
+      await { SampleState.waitForAssignment() }
     }
+
+    val localFuture = async {
+      val files = await { new MemorySortManager(FileManager.memSortDirName).start }
+
+      val sortedFiles = await { new FileMergeManager(FileManager.memSortDirName, FileManager.fileMergeDirName).start(files) }
+
+      sortedFiles
+    }
+
+    val (_, sortedFiles) = await { masterFuture.zip(localFuture) }
 
     val assignedRange = SampleState.getAssignedRange.getOrElse(throw new RuntimeException("Assigned range is not available"))
 
