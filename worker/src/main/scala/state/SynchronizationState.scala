@@ -7,6 +7,7 @@ import global.Restorable
 
 class SynchronizationState extends Serializable with Restorable {
   private var shufflePlans: Map[String, Seq[String]] = Map.empty
+  private var transmitCompleted: Boolean = false
   private var reportCompleted: Boolean = false
   private var shuffleStarted: Boolean = false
   @transient private val shuffleStartPromise: Promise[Unit] = Promise[Unit]()
@@ -28,6 +29,14 @@ object SynchronizationState {
 
   def getShufflePlans: Map[String, Seq[String]] = WorkerState.synchronized {
     WorkerState.synchronization.shufflePlans
+  }
+
+  def completeTransmit() = WorkerState.synchronized {
+    WorkerState.synchronization.transmitCompleted = true
+  }
+
+  def isTransmitCompleted = WorkerState.synchronized {
+    WorkerState.synchronization.transmitCompleted
   }
 
   def completeReport() = WorkerState.synchronized {
