@@ -18,6 +18,7 @@ object MasterState {
   private var finalMergeCompletedWorkers = Set[String]()
   private var terminated = false
   private val shutdownPromise: Promise[Unit] = Promise[Unit]()
+  val assignRangesCompletedPromise: Promise[Unit] = Promise[Unit]()
 
   def setWorkersNum(num: Int): Unit = this.synchronized {
     workersNum = num
@@ -31,10 +32,10 @@ object MasterState {
   def registerWorker(request: WorkerInfo): Boolean = this.synchronized {
     val workerIp = request.ip
     if (registeredWorkers.contains(workerIp)) {
-        println(s"Fault detected! Re-register worker($workerIp:${request.port})")
-        println(registeredWorkers.keys.mkString(", "))
+      println(s"Fault detected! Re-register worker($workerIp:${request.port})")
+      println(registeredWorkers.keys.mkString(", "))
       registeredWorkers += (workerIp -> request)
-        true
+      true
     } else {
       registeredWorkers += (workerIp -> request)
       if (registeredWorkers.size == workersNum) {
@@ -65,6 +66,10 @@ object MasterState {
       calculateRangesStarted = true
       true
     }
+  }
+
+  def isCalculateRangesStarted = this.synchronized {
+    calculateRangesStarted
   }
 
   def calculateRanges(): Unit = this.synchronized {

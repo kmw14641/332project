@@ -1,7 +1,7 @@
 package server
 
 import scala.concurrent.{ExecutionContext, Future}
-import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, RangeAssignment, WorkerNetworkInfo, AssignRangesResponse, WorkerRangeAssignment, FileListMessage, FileListAck, StartShuffleCommand, StartShuffleAck, TerminateCommand, TerminateAck}
+import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, RangeAssignment, WorkerNetworkInfo, AssignRangesResponse, WorkerRangeAssignment, FileListMessage, FileListAck, StartShuffleCommand, StartShuffleAck, TerminateCommand, TerminateAck, IntroduceAck}
 import io.grpc.{Status, StatusException}
 import java.math.BigInteger
 import global.WorkerState
@@ -81,5 +81,10 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
   override def terminate(request: TerminateCommand): Future[TerminateAck] = Future {
     TerminationState.markTerminated()
     TerminateAck(success = true)
+  }
+
+  override def introduceNewWorker(request: WorkerNetworkInfo): Future[IntroduceAck] = Future {
+    ConnectionManager.replaceWorkerChannel(request.ip, request.port)
+    IntroduceAck(success = true)
   }
 }
