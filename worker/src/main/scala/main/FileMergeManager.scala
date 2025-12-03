@@ -12,6 +12,8 @@ import scala.annotation.tailrec
 import common.data.Data.{Record, getRecordOrdering, RECORD_SIZE}
 import utils.{ThreadpoolUtils, FileManager}
 import utils.FileManager.{InputSubDir, OutputSubDir}
+import java.nio.file.Files
+import java.nio.file.Paths
 
 class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
   val threadPool = Executors.newFixedThreadPool(ThreadpoolUtils.getThreadCount)
@@ -25,7 +27,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
       val oldFilePath = FileManager.getFilePathFromInputDir(filename)
       val newFilename = FileManager.getRandomFilename
       val newFilePath = FileManager.getFilePathFromOutputDir(newFilename)
-      FileManager.move(oldFilePath, newFilePath)
+      Files.copy(Paths.get(oldFilePath), Paths.get(newFilePath))
       newFilename
     }}
     twoWayMergeSort(filenames)
