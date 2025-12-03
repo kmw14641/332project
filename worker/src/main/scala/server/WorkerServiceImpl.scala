@@ -31,8 +31,6 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
     StateRestoreManager.storeState()
     SampleState.markAssigned()
 
-    ConnectionManager.initWorkerChannels(workersRangeAssignment.keys.toSeq)
-
     workersRangeAssignment.foreach {
       // Print assigned ranges for debugging
       case ((ip, port), (start, end)) =>
