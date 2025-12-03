@@ -3,10 +3,13 @@ package state
 import scala.concurrent.Promise
 import scala.concurrent.Future
 import global.WorkerState
+import global.Restorable
 
-class SynchronizationState extends Serializable {
+class SynchronizationState extends Serializable with Restorable {
   private var shufflePlans: Map[String, Seq[String]] = Map.empty
   @transient private val shuffleStartPromise: Promise[Unit] = Promise[Unit]()
+
+  def restoreTransient(): Unit = {}
 }
 
 object SynchronizationState {

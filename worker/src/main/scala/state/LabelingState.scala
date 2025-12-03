@@ -2,8 +2,12 @@ package state
 
 import global.WorkerState
 
-class LabelingState extends Serializable {
+import global.Restorable
+
+class LabelingState extends Serializable with Restorable {
   private var assignedFiles: Map[(String, Int), List[String]] = Map.empty
+
+  def restoreTransient(): Unit = {}
 }
 
 object LabelingState {

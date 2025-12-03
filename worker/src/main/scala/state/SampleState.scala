@@ -4,10 +4,13 @@ import common.data.Data.Key
 import scala.concurrent.Promise
 import scala.concurrent.Future
 import global.WorkerState
+import global.Restorable
 
-class SampleState extends Serializable {
+class SampleState extends Serializable with Restorable {
   private var assignedRange: Option[Map[(String, Int), (Key, Key)]] = None
   @transient private val assignPromise: Promise[Unit] = Promise[Unit]()
+
+  def restoreTransient(): Unit = {}
 }
 
 object SampleState {
