@@ -71,7 +71,7 @@ object Main extends App {
     val localFuture = async {
       val files = await { new MemorySortManager(FileManager.memSortDirName).start }
 
-      val sortedFiles = await { new FileMergeManager(FileManager.memSortDirName, FileManager.fileMergeDirName).start(files) }
+      val sortedFiles = await { new FileMergeManager(FileManager.memSortDirName, FileManager.fileMergeDirName).start(files, WorkerState.localMerge) }
 
       sortedFiles
     }
@@ -100,7 +100,7 @@ object Main extends App {
 
     println(s"[Shuffle][Completed] files: [${completedShufflePlans.mkString(", ")}]")
 
-    val finalFiles = await { new FileMergeManager(FileManager.shuffleDirName, FileManager.finalDirName).start(completedShufflePlans) }
+    val finalFiles = await { new FileMergeManager(FileManager.shuffleDirName, FileManager.finalDirName).start(completedShufflePlans, WorkerState.shuffleMerge) }
     FileManager.mergeAllFiles(s"$outputDir/sorted.bin", finalFiles, FileManager.finalDirName)
     println(s"[Completed] Final output file: ${s"$outputDir/sorted.bin"}")
 
