@@ -3,6 +3,7 @@ package global
 import java.io._
 import global.WorkerState
 import utils.FileManager
+import scala.util.Using
 
 object StateRestoreManager {
     val stateFileName: String = "worker_state"
@@ -15,26 +16,20 @@ object StateRestoreManager {
     def storeState(): Unit = this.synchronized {
         FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
 
-        val oos = new ObjectOutputStream(new FileOutputStream(FileManager.getFilePathFromOutputDir(stateFileName)))
-        try {
+        Using(new ObjectOutputStream(new FileOutputStream(FileManager.getFilePathFromOutputDir(stateFileName)))) { oos =>
             val instance = WorkerState.synchronized { WorkerState.instance }
             oos.writeObject(instance)
-        } finally {
-            oos.close()
-        }
+        }.get
     }
 
     def restoreState() = this.synchronized {
         assert(!isClean())
 
-        val ois = new ObjectInputStream(new FileInputStream(FileManager.getFilePathFromOutputDir(stateFileName)))
-        try {
+        Using(new ObjectInputStream(new FileInputStream(FileManager.getFilePathFromOutputDir(stateFileName)))) { ois =>
             val instance = ois.readObject().asInstanceOf[WorkerState]
             instance.states.foreach(_.restoreTransient())
             WorkerState.synchronized { WorkerState.instance = instance }
-        } finally {
-            ois.close()
-        }
+        }.get
     }
 
     def clear(): Unit = this.synchronized {
