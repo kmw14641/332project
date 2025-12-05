@@ -50,7 +50,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
 
             val workerFutures = shufflePlansToProcess.map {
                 case (workerIp, fileList) if workerIp != selfIp => processFilesSequentially(workerIp, fileList)
-                case (workerIp, fileList) => Future.successful(moveLocalFiles(fileList))
+                case (workerIp, fileList) => Future.successful(copyLocalFiles(fileList))
             }
             await { Future.sequence(workerFutures) }
 
@@ -61,12 +61,12 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
         shufflePlansWithCompleted.values.flatMap(_.keys).toList
     }
 
-    private def moveLocalFiles(fileList: Seq[String]): Unit = {
+    private def copyLocalFiles(fileList: Seq[String]): Unit = {
         fileList.foreach { filename =>
             println(s"[Local Shuffle] Moving file: $filename")
             val filePath = FileManager.getFilePathFromInputDir(filename)
             val newFilePath = FileManager.getFilePathFromOutputDir(filename)
-            FileManager.move(filePath, newFilePath)
+            FileManager.copy(filePath, newFilePath)
         }
     }
 
