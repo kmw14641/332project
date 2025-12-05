@@ -3,7 +3,7 @@ package global
 import scala.concurrent.{Future, Promise}
 import common.data.Data.Key
 import com.google.protobuf.ByteString
-import state.{SampleState, LabelingState, SynchronizationState, TerminationState}
+import state.{SampleState, LabelingState, SynchronizationState, TerminationState, MemorySortState}
 import state.ShuffleState
 
 trait Restorable {
@@ -18,8 +18,9 @@ class WorkerState extends Serializable {
   val synchronization: SynchronizationState = new SynchronizationState()
   val shuffle: ShuffleState = new ShuffleState()
   val termination: TerminationState = new TerminationState()
+  val memorySort: MemorySortState = new MemorySortState()
 
-  def states: Seq[Restorable] = Seq(sample, labeling, synchronization, shuffle, termination)
+  def states: Seq[Restorable] = Seq(sample, labeling, synchronization, shuffle, termination, memorySort)
 }
 
 object WorkerState {
@@ -30,4 +31,5 @@ object WorkerState {
   def synchronization = instance.synchronization
   def shuffle = instance.shuffle
   def terminate = instance.termination
+  def memorySort = instance.memorySort
 }
