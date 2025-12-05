@@ -7,6 +7,7 @@ import java.nio.ByteBuffer
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future}
 import scala.async.Async.async
+import scala.util.Try
 
 import com.google.protobuf.ByteString
 
@@ -79,7 +80,15 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
             val newFilename = s"$from-$workerIp-$fileNum"
             val newFilePath = FileManager.getFilePathFromOutputDir(newFilename)
             
-            FileManager.link(filePath, newFilePath)
+            // 여기서 delete를 쓰는 이유는
+            // labeling에서 프로그램이 멈추는 경우 UUID의 경우는 파일 이름이 겹치지 않지만
+            // labeling에서는 정해진 형식의 filename을 사용하기 때문에 무조건 겹치는 경우가 발생함
+            // 따라서 labeling에서는 state restoration을 구현하지 않고
+            // 그냥 labeling이 재시작될 때마다 기존의 충돌하는 파일들을 삭제하는 방식을 사용함
+            Try(FileManager.link(filePath, newFilePath)).getOrElse {
+              Files.deleteIfExists(Paths.get(newFilePath))
+              FileManager.link(filePath, newFilePath)
+            }
             println(s"[FileAssignment]   ✓ Renamed entire file to: $newFilename")
             
             val newAssignments = assignments.updated(workerId, newFilename :: assignments.getOrElse(workerId, List.empty))
