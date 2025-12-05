@@ -16,9 +16,13 @@ object StateRestoreManager {
     def storeState(): Unit = this.synchronized {
         FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
 
-        Using(new ObjectOutputStream(new FileOutputStream(FileManager.getFilePathFromOutputDir(stateFileName)))) { oos =>
-            val instance = WorkerState.synchronized { WorkerState.instance }
-            oos.writeObject(instance)
+        val bos = new ByteArrayOutputStream()
+        Using(new ObjectOutputStream(bos)) { oos =>
+            WorkerState.synchronized { oos.writeObject(WorkerState.instance) }  // serialize to memory first, release lock, write to disk
+        }.get
+
+        Using(new FileOutputStream(FileManager.getFilePathFromOutputDir(stateFileName))) { fos =>
+            fos.write(bos.toByteArray)
         }.get
     }
 
@@ -28,7 +32,7 @@ object StateRestoreManager {
         Using(new ObjectInputStream(new FileInputStream(FileManager.getFilePathFromOutputDir(stateFileName)))) { ois =>
             val instance = ois.readObject().asInstanceOf[WorkerState]
             instance.states.foreach(_.restoreTransient())
-            WorkerState.synchronized { WorkerState.instance = instance }
+            WorkerState.synchronized { WorkerState.instance = instance }  // just replace already created instance
         }.get
     }
 
