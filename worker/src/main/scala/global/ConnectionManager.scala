@@ -21,15 +21,26 @@ object ConnectionManager {
         masterChannel
     }
 
+    // prioritize replace request than init request:
+    // if there is multiple re-register from one worker,
+    // we have to consider later request arrives first, and overwritten by no longer valid request
+    // (it may be resolved by timestamp in request)
+    // however, we have constraint that only one fault occurs,
+    // so just considering replace request as newer request resolves this problem easily
     def initWorkerChannels(workers: Seq[(String, Int)]): Unit = this.synchronized {
         assert( workers.map(_._1).toSet.size == workers.size, "Worker IPs must be unique" )
         workers.foreach { case (ip, port) => 
-            workerChannels += ip -> createChannel(ip, port)
+            if (!workerChannels.contains(ip)) {
+                workerChannels(ip) = createChannel(ip, port)
+            }
         }
     }
 
-    def replaceWorkerChannel(ip: String, port: Int): Unit = this.synchronized {
-        getWorkerChannel(ip).shutdown()
+    def setWorkerChannel(ip: String, port: Int): Unit = this.synchronized {
+        workerChannels.get(ip).foreach(ch => {
+            ch.shutdown()
+            println(s"Shutdown invalid channel of $ip")
+        })
         workerChannels(ip) = createChannel(ip, port)
     }
 

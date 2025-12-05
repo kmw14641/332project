@@ -85,7 +85,7 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
   }
 
   override def introduceNewWorker(request: WorkerNetworkInfo): Future[IntroduceAck] = Future {
-    ConnectionManager.replaceWorkerChannel(request.ip, request.port)
+    ConnectionManager.setWorkerChannel(request.ip, request.port)
     IntroduceAck(success = true)
   }
 }
