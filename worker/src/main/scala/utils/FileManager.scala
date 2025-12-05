@@ -164,6 +164,8 @@ object FileManager {
 
   def move(oldFilePath: String, newFilePath: String): Unit = Files.move(Paths.get(oldFilePath), Paths.get(newFilePath), StandardCopyOption.ATOMIC_MOVE)
 
+  def copy(oldFilePath: String, newFilePath: String): Unit = Files.copy(Paths.get(oldFilePath), Paths.get(newFilePath), StandardCopyOption.REPLACE_EXISTING)
+
   def delete(filePath: String): Unit = Files.deleteIfExists(Paths.get(filePath))
 
   def deleteAll(filePaths: Seq[String]): Unit = {
