@@ -79,7 +79,7 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
             val newFilename = s"$from-$workerIp-$fileNum"
             val newFilePath = FileManager.getFilePathFromOutputDir(newFilename)
             
-            FileManager.move(filePath, newFilePath)
+            FileManager.link(filePath, newFilePath)
             println(s"[FileAssignment]   ✓ Renamed entire file to: $newFilename")
             
             val newAssignments = assignments.updated(workerId, newFilename :: assignments.getOrElse(workerId, List.empty))
@@ -122,10 +122,7 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
               val remainingStartKey = part2Records.head._1
               val remainingEndKey = part2Records.last._1
               println(s"[FileAssignment]   ✓ Created part2: $remainingFilename (${part2Records.length} records) - pushed to front")
-              
-              // Delete original file
-              FileManager.delete(filePath)
-              
+
               // Return remaining files with part2 prepended, and stop processing for this worker
               ((remainingFilename, remainingStartKey, remainingEndKey) :: restFiles, newAssignments)
               

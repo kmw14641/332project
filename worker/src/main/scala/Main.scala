@@ -106,8 +106,7 @@ object Main extends App {
 
     await { new TerminationManager().shutdownServerSafely(server) }
 
-    FileManager.deleteAll(finalFiles)
-    FileManager.deleteAllSubDir
+    FileManager.deleteAllIntermedia
 
     StateRestoreManager.clear()
   }

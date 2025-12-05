@@ -3,10 +3,6 @@ package state
 import global.{Restorable, WorkerState}
 
 class FileMergeState extends Serializable with Restorable {
-  // Map input filename -> output filename (for the initial move phase)
-  var movedFiles: Map[String, String] = Map.empty
-  var isMoveCompleted: Boolean = false
-  
   // Merge Sort State
   var currentRound: Int = 1
   var currentFileLists: Option[List[List[String]]] = None
@@ -17,14 +13,6 @@ class FileMergeState extends Serializable with Restorable {
 
 object FileMergeState {
   // Helper methods to access state instance
-  def isMoveCompleted(implicit state: FileMergeState): Boolean = WorkerState.synchronized {
-    state.isMoveCompleted
-  }
-
-  def setMoveCompleted(implicit state: FileMergeState): Unit = WorkerState.synchronized {
-    state.isMoveCompleted = true
-  }
-  
   def getCurrentFileLists(implicit state: FileMergeState): Option[List[List[String]]] = WorkerState.synchronized {
     state.currentFileLists
   }

@@ -66,7 +66,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
             println(s"[Local Shuffle] Moving file: $filename")
             val filePath = FileManager.getFilePathFromInputDir(filename)
             val newFilePath = FileManager.getFilePathFromOutputDir(filename)
-            FileManager.move(filePath, newFilePath)
+            FileManager.link(filePath, newFilePath)
         }
     }
 

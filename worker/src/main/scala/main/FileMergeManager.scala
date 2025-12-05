@@ -28,31 +28,26 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
     implicit val mergeState = state
     FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
     
-    // 1. 만약 move가 안되었다
-    // -> 그냥 평범하게 받은 files로 move 진행하면 된다
-    // 2. 만약 move가 되었다.
-    // -> 애초에 그럼 할 일이 없다. move가 되었다는 건 merge가 적어도 진행되기 직전이었다는 뜻이다.
-    // merge의 진행은 전적으로 argument가 아닌 State의 fileLists를 의존하므로
-    // move를 했다면 fileLists도 세팅이 되어있어야 함을 의미한다.
-    // 따라서 그런 dependency를 고려하면 이 같은 로직이 옳다.
-    if (!FileMergeState.isMoveCompleted) {
-      val newFilenames = files.map { filename => {
-        val newFilename = FileManager.getRandomFilename
-        val oldFilePath = FileManager.getFilePathFromInputDir(filename)
-        val newFilePath = FileManager.getFilePathFromOutputDir(newFilename)
-        FileManager.move(oldFilePath, newFilePath)
-        newFilename
-      }}
+    // Link files to output directory
+    // Since we use hard links (or copies if links fail), we don't need to track state for this phase.
+    // If the process fails during linking, we can just re-link everything on restart.
+    // The original files are preserved.
+    val filenames = files.map { filename => {
+      val newFilename = FileManager.getRandomFilename
+      val oldFilePath = FileManager.getFilePathFromInputDir(filename)
+      val newFilePath = FileManager.getFilePathFromOutputDir(newFilename)
+      
+      // Use link instead of move to preserve original files
+      // If link exists (from previous run), it will be overwritten or we can just use it
+      // But since we generate random filenames, we should just create new links
+      // To avoid accumulating garbage, we might want to clean up the output dir on start, 
+      // but that's handled by FileManager.createDirectoryIfNotExists (if it cleans) or manual cleanup.
+      // For now, just create links.
+      FileManager.link(oldFilePath, newFilePath)
+      newFilename
+    }}
 
-      //sys.exit(1)
-
-      FileMergeState.setCurrentFileLists(newFilenames.map(f => List(f)))
-      FileMergeState.setRound(1)
-      FileMergeState.setMoveCompleted
-      StateRestoreManager.storeState()
-    }
-    
-    twoWayMergeSort(state)
+    twoWayMergeSort(filenames)(state)
   }
 
   /**
@@ -72,11 +67,12 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
    *          Result: [[e,f,g,h]]
    * After this round, files in [e,f,g,h] are guaranteed to be sorted in order
    */
-  private def twoWayMergeSort(implicit state: FileMergeState): Future[List[String]] = async {
-    require { 
-      FileMergeState.isMoveCompleted && 
-      FileMergeState.getCurrentFileLists.isDefined &&
-      FileMergeState.getRound >= 1
+  private def twoWayMergeSort(files: List[String])(implicit state: FileMergeState): Future[List[String]] = async {
+    // Initialize state if not present
+    if (FileMergeState.getCurrentFileLists.isEmpty) {
+      FileMergeState.setCurrentFileLists(files.map(f => List(f)))
+      FileMergeState.setRound(1)
+      StateRestoreManager.storeState()
     }
 
     var currentLists = FileMergeState.getCurrentFileLists.get
@@ -112,12 +108,6 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
           
           FileMergeState.markPairCompleted(index, outputFiles)
           StateRestoreManager.storeState()
-    
-          // Delete input files that were merged
-          // 여기서 지우는 이유는 race condition 방지
-          // 만약 merge가 완료된 후 지워진 상태에서 종료된다면 input을 삭제된 상태로 state 저장이 안 되어 복원에서 문제가 생길 수 있음
-          // 여기서 지우면 적어도 state가 저장된 후 지우므로 어떤 경우에도 대응 가능함
-          FileManager.deleteAll(filePathList1 ++ filePathList2)
 
           println(s"[MergeSort-Round$round][$threadId] Completed merge pair $index: ${outputFiles.size} output files")
           (index, outputFiles)
@@ -139,7 +129,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
           val oldFilePath = FileManager.getFilePathFromOutputDir(file)
           val newFilename = FileManager.getRandomFilename
           val newFilePath = FileManager.getFilePathFromOutputDir(newFilename)
-          Files.move(Paths.get(oldFilePath), Paths.get(newFilePath))
+          FileManager.link(oldFilePath, newFilePath)
           newFilename
         })
       }
