@@ -6,17 +6,16 @@ import utils.FileManager
 
 object StateRestoreManager {
     val stateFileName: String = "worker_state"
-    def fileDir: String = s"${FileManager.getOutputDir.get}/${FileManager.stateRestoreDirName}"
-    def filePath: String = s"$fileDir/$stateFileName"
+    implicit val outputSubDir: FileManager.OutputSubDir = FileManager.OutputSubDir(FileManager.stateRestoreDirName)
 
     def isClean(): Boolean = this.synchronized {
-        !new File(filePath).exists()
+        !new File(FileManager.getFilePathFromOutputDir(stateFileName)).exists()
     }
 
     def storeState(): Unit = this.synchronized {
-        FileManager.createDirectoryIfNotExists(fileDir)
+        FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
 
-        val oos = new ObjectOutputStream(new FileOutputStream(filePath))
+        val oos = new ObjectOutputStream(new FileOutputStream(FileManager.getFilePathFromOutputDir(stateFileName)))
         try {
             val instance = WorkerState.synchronized { WorkerState.instance }
             oos.writeObject(instance)
@@ -28,7 +27,7 @@ object StateRestoreManager {
     def restoreState() = this.synchronized {
         assert(!isClean())
 
-        val ois = new ObjectInputStream(new FileInputStream(filePath))
+        val ois = new ObjectInputStream(new FileInputStream(FileManager.getFilePathFromOutputDir(stateFileName)))
         try {
             val instance = ois.readObject().asInstanceOf[WorkerState]
             instance.states.foreach(_.restoreTransient())
@@ -39,7 +38,6 @@ object StateRestoreManager {
     }
 
     def clear(): Unit = this.synchronized {
-        val file = new File(filePath)
-        if (file.exists()) file.delete()
+        FileManager.delete(FileManager.getFilePathFromOutputDir(stateFileName))
     }
 }
