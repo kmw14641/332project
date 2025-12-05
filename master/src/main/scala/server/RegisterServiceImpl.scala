@@ -11,8 +11,7 @@ class RegisterServiceImpl(implicit ec: ExecutionContext) extends RegisterService
   override def registerWorker(request: WorkerInfo): Future[RegisterWorkerResponse] = Future {
     val faultOccured = MasterState.registerWorker(request)
     ConnectionManager.registerWorkerChannel(request.ip, request.port)
-    if (faultOccured && MasterState.isCalculateRangesStarted) async {
-      await { MasterState.assignRangesCompletedPromise.future }
+    if (faultOccured) {
       MasterState.getRegisteredWorkers.filter(_._1 != request.ip).map { case (workerIp, _) => async {
           val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(workerIp))
           await { stub.introduceNewWorker(new WorkerNetworkInfo(request.ip, request.port)) }

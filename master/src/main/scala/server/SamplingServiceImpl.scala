@@ -28,7 +28,7 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
     )
   }
 
-  private def assignRangesToWorkers(): Future[Unit] = async {
+  private def assignRangesToWorkers(): Unit = {
     val workers = MasterState.getRegisteredWorkers.toSeq.sortBy(_._1)
     val ranges = MasterState.getRanges
 
@@ -43,7 +43,7 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
       }.toSeq
     )
     
-    val assignRangesFutures = workers.map { case (ip, _) =>
+    for ((ip, info) <- workers) {
       retry {
         async {
           val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
@@ -51,9 +51,5 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
         }
       }
     }
-
-    await { Future.sequence(assignRangesFutures) }
-
-    MasterState.assignRangesCompletedPromise.success()
   }
 }
