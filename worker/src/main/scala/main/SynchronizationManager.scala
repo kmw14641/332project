@@ -80,16 +80,18 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
         retry {
           async {
             val fileNames = files.mkString(", ")
-            println(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
+            val channel = ConnectionManager.getWorkerChannel(ip)
+            val info = channel.authority()
+            println(s"[Sync][SendList] $selfIp -> $info files: [$fileNames]")
 
-            val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+            val stub = WorkerServiceGrpc.stub(channel)
             val request = FileListMessage(
               senderIp = selfIp,
               files = files
             )
 
             await { stub.deliverFileList(request) }
-            println(s"[Sync] Delivered ${files.size} file descriptors to $ip:$port")
+            println(s"[Sync] Delivered ${files.size} file descriptors to $info")
           }
         }
       }
