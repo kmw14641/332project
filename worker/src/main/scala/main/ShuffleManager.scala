@@ -17,6 +17,7 @@ import utils.FileManager.{InputSubDir, OutputSubDir}
 import global.StateRestoreManager
 import scala.collection.mutable
 import state.ShuffleState
+import state.TerminationState
 
 class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit ec: ExecutionContext) {
     implicit val inputSubDirNameImplicit: InputSubDir = InputSubDir(inputSubDirName)
@@ -126,6 +127,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
                 }
                 assert { clientObserver.isDefined }
                 clientObserver.get.request(1)
+                TerminationState.shutdownOnce()
             }
 
             override def onError(e: Throwable): Unit = {  // error during streaming
