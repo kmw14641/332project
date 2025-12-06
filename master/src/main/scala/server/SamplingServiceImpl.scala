@@ -1,5 +1,6 @@
 package server
 
+import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.async.Async.{async, await}
@@ -9,6 +10,8 @@ import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, WorkerRa
 import common.utils.RetryUtils.retry
 
 class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingServiceGrpc.SamplingService {
+  private val logger = LoggerFactory.getLogger(getClass)
+  
   override def sampling(request: SampleData): Future[SampleResponse] = {
     val keys = request.keys
     val success = MasterState.addSamples(request.workerIp, keys)
@@ -32,7 +35,7 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
     val workers = MasterState.getRegisteredWorkers.toSeq.sortBy(_._1)
     val ranges = MasterState.getRanges
 
-    println("Assigning ranges to workers...")
+    logger.info("Assigning ranges to workers...")
     
     val request = WorkersRangeAssignment(
       assignments = ranges.map { case ((workerIp, workerPort), (start, end)) =>

@@ -1,5 +1,6 @@
 package main
 
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.{ConcurrentLinkedQueue, Executors, ExecutorService}
@@ -30,17 +31,19 @@ import global.WorkerState
 import state.SampleState
 
 class SampleManager(implicit ec: ExecutionContext) {
+  private val logger = LoggerFactory.getLogger(getClass)
+  
   private val stub = SamplingServiceGrpc.stub(ConnectionManager.getMasterChannel())
   val SAMPLE_SIZE = Math.min(100000, SystemUtils.getRamMb * 1024 * 1024 / RECORD_SIZE)  // Number of samples to collect per worker, total 1MB
   val THREAD_NUM = Math.min(8, SystemUtils.getProcessorNum)
 
   def start(): Future[Unit] = async {
     if (SampleState.isSendSampleCompleted) {
-      println("[StateRestore] Skip send sample")
+        logger.info("[StateRestore] Skip send sample")
     }
     else {
       val workerIp = SystemUtils.getLocalIp.getOrElse {
-        println("Failed to get local IP address")
+          logger.error("Failed to get local IP address")
         sys.exit(1)
       }
 
@@ -55,11 +58,11 @@ class SampleManager(implicit ec: ExecutionContext) {
       val success = await { responseFuture }.success
     
       if (success) {
-        println("Samples sent successfully. Waiting for range assignment...")
+          logger.info("Samples sent successfully. Waiting for range assignment...")
         SampleState.completeSendSample()
         StateRestoreManager.storeState()
       } else {
-        println("Failed to send samples to master")
+          logger.error("Failed to send samples to master")
       }
     }
   }
@@ -108,7 +111,7 @@ class SampleManager(implicit ec: ExecutionContext) {
               results.add(ByteString.copyFrom(buffer.array()))
             } catch {
               case e: Exception => 
-                println(s"Error reading record at index $recordIdx from file $filePath: ${e.getMessage}")
+                  logger.error(s"Error reading record at index $recordIdx from file $filePath: ${e.getMessage}")
             } finally {
               buffer.clear()
             }

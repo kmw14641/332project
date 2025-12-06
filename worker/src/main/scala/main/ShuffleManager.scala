@@ -1,5 +1,6 @@
 package main
 
+import org.slf4j.LoggerFactory
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.concurrent.{ExecutionContext, Future, blocking, Promise}
 import global.WorkerState
@@ -19,6 +20,8 @@ import scala.collection.mutable
 import state.ShuffleState
 
 class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit ec: ExecutionContext) {
+    private val logger = LoggerFactory.getLogger(getClass)
+    
     implicit val inputSubDirNameImplicit: InputSubDir = InputSubDir(inputSubDirName)
     implicit val outputSubDirNameImplicit: OutputSubDir = OutputSubDir(outputSubDirName)
     val maxTries = 10
@@ -36,13 +39,13 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
         }
 
         if (ShuffleState.isShuffleCompleted) {
-            println("[StateRestore] Skip shuffle")
+            logger.info("[StateRestore] Skip shuffle")
         } else {
             val shufflePlansToProcess: Seq[(String, Seq[String])] = shufflePlansWithCompleted.view
                 .mapValues(_.filter(_._2 == false).keys.toSeq).toSeq  // false인것만 seq of seq로 변환
 
             val skippedFileNum = shufflePlansWithCompleted.values.flatMap(_.keys).size - shufflePlansToProcess.flatMap(_._2).size
-            if (skippedFileNum != 0) println(s"[StateRestore] Skip $skippedFileNum files at shuffle")
+            if (skippedFileNum != 0) logger.info(s"[StateRestore] Skip $skippedFileNum files at shuffle")
 
             val selfIp = SystemUtils.getLocalIp.get
 
@@ -63,7 +66,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
 
     private def copyLocalFiles(fileList: Seq[String]): Unit = {
         fileList.foreach { filename =>
-            println(s"[Local Shuffle] Moving file: $filename")
+            logger.info(s"[Local Shuffle] Moving file: $filename")
             val filePath = FileManager.getFilePathFromInputDir(filename)
             val newFilePath = FileManager.getFilePathFromOutputDir(filename)
             FileManager.copy(filePath, newFilePath)
@@ -74,7 +77,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
         fileList match {
             case Nil => ()
             case head :: tail => {
-                println(s"Processing file [$workerIp, $head]")
+                logger.info(s"Processing file [$workerIp, $head]")
                 await { retry { processFile(workerIp, head) } }
 
                 ShuffleState.completeShufflePlanFile(workerIp, head)
@@ -100,11 +103,11 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
         def tryClose(fileChannel: FileChannel): Unit = {
             try { fileChannel.close() } catch {
                 // 원래 예외를 보존하기 위해 catch 블록의 에러는 바로 처리 (로그만 남김)
-                case e: Throwable => println(s"[WARN] Failed to close fileChannel for [$workerIp, $filename]: ${e.getMessage}")
+                case e: Throwable => logger.warn(s"Failed to close fileChannel for [$workerIp, $filename]: ${e.getMessage}")
             }
         }
         
-        println(s"[$workerIp, $filename] request")
+        logger.info(s"[$workerIp, $filename] request")
         val observer = new ClientResponseObserver[DownloadRequest, DownloadResponse] {
             // ClientReponseObserver defined as interface, we have to declare member ourselves. (I don't know why)
             // although beforeStart is called before onNext, onNext is runned on thread pool, need to be volatile
@@ -134,7 +137,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
             }
 
             override def onCompleted(): Unit = {
-                println(s"[$workerIp, $filename] response completed")
+                logger.info(s"[$workerIp, $filename] response completed")
                 tryClose(fileChannel)
                 promise.success(())
             }

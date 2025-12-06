@@ -1,9 +1,12 @@
 package global
 
+import org.slf4j.LoggerFactory
 import io.grpc.{ManagedChannel, ManagedChannelBuilder}
 import scala.collection.mutable
 
 object ConnectionManager {
+    private val logger = LoggerFactory.getLogger(getClass)
+    
     val maxGrpcMessageSize: Int = 1024 * 1024 * 1024  // 1GB
 
     private var masterChannel: ManagedChannel = _
@@ -39,7 +42,7 @@ object ConnectionManager {
     def setWorkerChannel(ip: String, port: Int): Unit = this.synchronized {
         workerChannels.get(ip).foreach(ch => {
             ch.shutdown()
-            println(s"Shutdown invalid channel of $ip")
+            logger.info(s"Shutdown invalid channel of $ip")
         })
         workerChannels(ip) = createChannel(ip, port)
     }

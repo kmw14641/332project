@@ -1,5 +1,6 @@
 package server
 
+import org.slf4j.LoggerFactory
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.concurrent.{ExecutionContext, Future, blocking}
 import shuffle.Shuffle.{DownloadRequest, DownloadResponse, ShuffleGrpc}
@@ -16,6 +17,7 @@ import global.GlobalLock
 import utils.FileManager.InputSubDir
 
 class ShuffleServiceImpl(inputSubDirName: String)(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuffle {
+    private val logger = LoggerFactory.getLogger(getClass)
     implicit val inputSubDirNameImplicit: InputSubDir = InputSubDir(inputSubDirName)
     val chunkSize = 1024 * 1024 * 180
 
@@ -28,7 +30,7 @@ class ShuffleServiceImpl(inputSubDirName: String)(implicit ec: ExecutionContext)
 
         def tryClose(fileChannel: FileChannel): Unit = {
             try { fileChannel.close() } catch {
-                case e: Throwable => println(s"[WARN] Failed to close fileChannel for ${request.filename}: ${e.getMessage}")
+                case e: Throwable => logger.warn(s"Failed to close fileChannel for ${request.filename}: ${e.getMessage}")
             }
         }
 

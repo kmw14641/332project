@@ -1,14 +1,17 @@
 package server
 
+import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{FinalMergePhaseReport, FinalMergePhaseAck, FinalMergeServiceGrpc}
 import global.{MasterState, ConnectionManager}
 import worker.WorkerService.{WorkerServiceGrpc, TerminateCommand}
 
 class FinalMergeServiceImpl(implicit ec: ExecutionContext) extends FinalMergeServiceGrpc.FinalMergeService {
+  private val logger = LoggerFactory.getLogger(getClass)
+  
   override def reportFinalMergeCompletion(request: FinalMergePhaseReport): Future[FinalMergePhaseAck] = Future {
     MasterState.markFinalMergeCompleted(request.workerIp)
-    println(s"Worker ${request.workerIp} completed final merge")
+    logger.info(s"Worker ${request.workerIp} completed final merge")
 
     if (MasterState.allFinalMergeCompleted) {
       terminateWorkers()
@@ -21,7 +24,7 @@ class FinalMergeServiceImpl(implicit ec: ExecutionContext) extends FinalMergeSer
     assert(!MasterState.isTerminated, "Termination should not double triggered without fault tolerance")
 
     MasterState.markTerminated()
-    println("All workers reported final merge completion. Triggering termination phase...")
+    logger.info("All workers reported final merge completion. Triggering termination phase...")
 
     val workers = MasterState.getRegisteredWorkers
     val terminateFutures = workers.map { case (ip, info) =>
@@ -29,16 +32,16 @@ class FinalMergeServiceImpl(implicit ec: ExecutionContext) extends FinalMergeSer
       val request = TerminateCommand(reason = "")
       stub.terminate(request).map(_ => ()).recover {
         case e: Exception => 
-          println(s"Failed to send terminate command to worker $ip:${info.port}: ${e.getMessage}")
+          logger.error(s"Failed to send terminate command to worker $ip:${info.port}: ${e.getMessage}")
       }
     }
 
     Future.sequence(terminateFutures).map { _ =>
-      println("All workers should be terminated. Signaling master shutdown...")
+      logger.info("All workers should be terminated. Signaling master shutdown...")
       MasterState.signalShutdown()
     }.recover {
       case e: Exception =>
-        println(s"Error during termination phase: ${e.getMessage}. Forcing shutdown...")
+        logger.error(s"Error during termination phase: ${e.getMessage}. Forcing shutdown...")
         MasterState.signalShutdown()
     }
   }

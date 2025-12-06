@@ -1,5 +1,6 @@
 package global
 
+import org.slf4j.LoggerFactory
 import master.MasterService.WorkerInfo
 import scala.collection.mutable.ArrayBuffer
 import com.google.protobuf.ByteString
@@ -8,6 +9,8 @@ import scala.concurrent.{Promise, Future}
 
 // Master Singleton
 object MasterState {
+  private val logger = LoggerFactory.getLogger(getClass)
+  
   private var workersNum: Int = -1
   private var registeredWorkers = Map[String, WorkerInfo]()
   private var samples = Map[String, Seq[Key]]()  // workerIp -> sampled keys
@@ -31,15 +34,15 @@ object MasterState {
   def registerWorker(request: WorkerInfo): Boolean = this.synchronized {
     val workerIp = request.ip
     if (registeredWorkers.contains(workerIp)) {
-      println(s"Fault detected! Re-register worker($workerIp:${request.port})")
-      println(registeredWorkers.keys.mkString(", "))
+      logger.warn(s"Fault detected! Re-register worker($workerIp:${request.port})")
+      logger.info(registeredWorkers.keys.mkString(", "))
       registeredWorkers += (workerIp -> request)
       true
     } else {
       registeredWorkers += (workerIp -> request)
       if (registeredWorkers.size == workersNum) {
-        println("all worker registered")
-        println(registeredWorkers.keys.mkString(", "))
+        logger.info("all worker registered")
+        logger.info(registeredWorkers.keys.mkString(", "))
       }
       false
     }
@@ -49,7 +52,7 @@ object MasterState {
 
   def addSamples(workerIp: String, keys: Seq[Key]): Boolean = this.synchronized {
     if (!registeredWorkers.contains(workerIp)) {
-      println(s"Warning: Received samples from unregistered worker: $workerIp")
+      logger.warn(s"Warning: Received samples from unregistered worker: $workerIp")
       return false
     }
 
@@ -105,7 +108,7 @@ object MasterState {
   */
   def markSyncCompleted(workerIp: String): (Boolean, Int, Int) = this.synchronized {
     if (!registeredWorkers.contains(workerIp)) {
-      println(s"Ignoring sync completion from unknown worker $workerIp")
+      logger.warn(s"Ignoring sync completion from unknown worker $workerIp")
       return (false, syncCompletedWorkers.size, registeredWorkers.size)
     }
 

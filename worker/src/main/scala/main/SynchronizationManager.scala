@@ -1,5 +1,6 @@
 package main
 
+import org.slf4j.LoggerFactory
 import common.utils.SystemUtils
 import global.{ConnectionManager, WorkerState}
 import master.MasterService.{SyncAndShuffleServiceGrpc, SyncPhaseReport}
@@ -13,10 +14,12 @@ import global.StateRestoreManager
 import common.utils.RetryUtils.retry
 
 class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(implicit ec: ExecutionContext) {
+  private val logger = LoggerFactory.getLogger(getClass)
+
   labeledFiles.foreach {
     case ((ip, port), files) =>
       val fileNames = files.mkString(", ")
-      println(s"[Sync][Assigned] $ip:$port files: [$fileNames]")
+      logger.info(s"[Sync][Assigned] $ip:$port files: [$fileNames]")
   }
   
   LabelingState.setAssignedFiles(labeledFiles)  // TODO: do at labeling phase
@@ -34,7 +37,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
       await(notifyMasterOfCompletion(selfIp))
       await(SynchronizationState.waitForShuffleCommand)
 
-      println("[Sync] Master authorized shuffle phase. Ready for file transfers.")
+      logger.info("[Sync] Master authorized shuffle phase. Ready for file transfers.")
 
       SynchronizationState.getShufflePlans
     }
@@ -54,7 +57,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   private def getOutgoingPlans(selfIp: String): Map[(String, Int), Seq[String]] = {
     LabelingState.getAssignedFiles.foreach {
       case ((ip, port), files) =>
-        println(s"[Sync] Preparing outgoing plan to $ip:$port with ${files.mkString(", ")} files.")
+        logger.info(s"[Sync] Preparing outgoing plan to $ip:$port with ${files.mkString(", ")} files.")
     }
       LabelingState.getAssignedFiles.collect {
         case (endpoint, files) if endpoint._1 != selfIp && files.nonEmpty =>
@@ -69,10 +72,10 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   */
   private def transmitPlans(plans: Map[(String, Int), Seq[String]], selfIp: String): Future[Unit] = async {
     if (SynchronizationState.isTransmitCompleted) {
-      println("[StateRestore] Skip transmitPlans")
+      logger.info("[StateRestore] Skip transmitPlans")
       ()
     } else if (plans.isEmpty) {
-      println("[Sync] No outgoing files to report.")
+      logger.info("[Sync] No outgoing files to report.")
       ()
     } 
     else {
@@ -80,7 +83,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
         retry {
           async {
             val fileNames = files.mkString(", ")
-            println(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
+            logger.info(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
 
             val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
             val request = FileListMessage(
@@ -89,7 +92,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
             )
 
             await { stub.deliverFileList(request) }
-            println(s"[Sync] Delivered ${files.size} file descriptors to $ip:$port")
+            logger.info(s"[Sync] Delivered ${files.size} file descriptors to $ip:$port")
           }
         }
       }
@@ -103,18 +106,18 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
 
   private def notifyMasterOfCompletion(workerIp: String): Future[Unit] = async {
     if (SynchronizationState.isReportCompleted) {
-      println("[StateRestore] Skip synchronization report")
+      logger.info("[StateRestore] Skip synchronization report")
       ()
     }
     else {
       val request = SyncPhaseReport(workerIp = workerIp)
       await {masterStub.reportSyncCompletion(request).andThen {
         case Success(_) =>
-          println("[Sync] Synchronization completed. Waiting for master's shuffle command...")
+          logger.info("[Sync] Synchronization completed. Waiting for master's shuffle command...")
           SynchronizationState.completeReport()
           StateRestoreManager.storeState()
         case Failure(e) =>
-          println(s"[Sync] Failed to report synchronization completion: ${e.getMessage}")
+          logger.error(s"[Sync] Failed to report synchronization completion: ${e.getMessage}")
         }
       }
     }

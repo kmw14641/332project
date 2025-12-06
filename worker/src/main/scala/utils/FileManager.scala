@@ -1,5 +1,6 @@
 package utils
 
+import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Paths, StandardOpenOption, StandardCopyOption}
 import java.nio.channels.FileChannel
@@ -16,6 +17,8 @@ import common.data.Data.{Record, KEY_SIZE, VALUE_SIZE, RECORD_SIZE}
 import common.utils.SystemUtils
 
 object FileManager {
+  private val logger = LoggerFactory.getLogger(getClass)
+  
   case class InputSubDir(val value: String)
   case class OutputSubDir(val value: String)
 
@@ -185,10 +188,10 @@ object FileManager {
               .forEach { path =>
                 Files.deleteIfExists(path)
               }
-            println(s"[FileManager] Deleted sub-directory: $subDirPath")
+            logger.info(s"[FileManager] Deleted sub-directory: $subDirPath")
           } catch {
             case e: Exception =>
-              println(s"[WARN] Failed to delete sub-directory $subDirPath: ${e.getMessage}")
+              logger.warn(s"Failed to delete sub-directory $subDirPath: ${e.getMessage}")
           }
         }
 

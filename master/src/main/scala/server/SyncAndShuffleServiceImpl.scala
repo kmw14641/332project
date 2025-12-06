@@ -1,5 +1,6 @@
 package server
 
+import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{SyncPhaseReport, SyncPhaseAck, SyncAndShuffleServiceGrpc}
 import global.{MasterState, ConnectionManager}
@@ -8,9 +9,11 @@ import scala.async.Async.{async, await}
 import common.utils.RetryUtils.retry
 
 class SyncAndShuffleServiceImpl(implicit ec: ExecutionContext) extends SyncAndShuffleServiceGrpc.SyncAndShuffleService {
+  private val logger = LoggerFactory.getLogger(getClass)
+  
   override def reportSyncCompletion(request: SyncPhaseReport): Future[SyncPhaseAck] = {
     val (allCompleted, current, total) = MasterState.markSyncCompleted(request.workerIp)
-    println(s"Worker ${request.workerIp} completed synchronization ($current/$total)")
+    logger.info(s"Worker ${request.workerIp} completed synchronization ($current/$total)")
 
     if (allCompleted && !MasterState.hasShuffleStarted) {
       Future {
@@ -23,12 +26,12 @@ class SyncAndShuffleServiceImpl(implicit ec: ExecutionContext) extends SyncAndSh
 
   private def startShufflePhase(): Unit = this.synchronized {
     if (MasterState.hasShuffleStarted) {
-      println("Shuffle phase already started; ignoring duplicate request.")
+      logger.info("Shuffle phase already started; ignoring duplicate request.")
       return
     }
 
     MasterState.markShuffleStarted()
-    println("All workers reported sync completion. Triggering shuffle phase...")
+    logger.info("All workers reported sync completion. Triggering shuffle phase...")
 
     val workers = MasterState.getRegisteredWorkers
     workers.foreach { case (ip, info) =>

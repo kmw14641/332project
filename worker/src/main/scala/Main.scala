@@ -1,3 +1,4 @@
+import org.slf4j.LoggerFactory
 import java.nio.file.{Files, Paths}
 
 import scala.concurrent.{ExecutionContext, Await}
@@ -20,6 +21,7 @@ import scala.concurrent.Future
 import state.SampleState
 
 object Main extends App {
+  private val logger = LoggerFactory.getLogger(getClass)
   implicit val ec: ExecutionContext = ExecutionContext.global
 
   val (masterAddr, inputDirs, outputDir) = WorkerOptionUtils.parse(args).getOrElse {
@@ -35,7 +37,7 @@ object Main extends App {
 
   if (invalidInputDirs.nonEmpty) {
     invalidInputDirs.foreach { dir =>
-      Console.err.println(s"Input directory does not exist or is not a directory: $dir")
+      logger.error(s"Input directory does not exist or is not a directory: $dir")
     }
     sys.exit(1)
   }
@@ -85,7 +87,7 @@ object Main extends App {
     labeledFiles.foreach {
       case (workerId, fileList) =>
         val fileNames = fileList.mkString(", ")
-        println(s"[Labeling][Assigned] ${workerId._1}:${workerId._2} files: [$fileNames]")
+        logger.info(s"[Labeling][Assigned] ${workerId._1}:${workerId._2} files: [$fileNames]")
     }
 
     val shufflePlans =  await { new SynchronizationManager(labeledFiles).start() }
@@ -93,16 +95,16 @@ object Main extends App {
     shufflePlans.foreach {
       case (workerIp, fileList) =>
         val fileNames = fileList.mkString(", ")
-        println(s"[Shuffle][Planned] $workerIp files: [$fileNames]")
+        logger.info(s"[Shuffle][Planned] $workerIp files: [$fileNames]")
     }
 
     val completedShufflePlans = await { new ShuffleManager(FileManager.labelingDirName, FileManager.shuffleDirName).start(shufflePlans) }
 
-    println(s"[Shuffle][Completed] files: [${completedShufflePlans.mkString(", ")}]")
+    logger.info(s"[Shuffle][Completed] files: [${completedShufflePlans.mkString(", ")}]")
 
     val finalFiles = await { new FileMergeManager(FileManager.shuffleDirName, FileManager.finalDirName).start(completedShufflePlans) }
     FileManager.mergeAllFiles(s"$outputDir/sorted.bin", finalFiles, FileManager.finalDirName)
-    println(s"[Completed] Final output file: ${s"$outputDir/sorted.bin"}")
+    logger.info(s"[Completed] Final output file: ${s"$outputDir/sorted.bin"}")
 
     await { new TerminationManager().shutdownServerSafely(server) }
 

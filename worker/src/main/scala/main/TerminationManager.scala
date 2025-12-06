@@ -1,5 +1,6 @@
 package main
 
+import org.slf4j.LoggerFactory
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import global.ConnectionManager
@@ -10,6 +11,8 @@ import io.grpc.Server
 import state.TerminationState
 
 class TerminationManager(implicit ec: ExecutionContext) {
+  private val logger = LoggerFactory.getLogger(getClass)
+
   private val masterStub = FinalMergeServiceGrpc.stub(ConnectionManager.getMasterChannel())
 
   def shutdownServerSafely(server: Server): Future[Unit] = async {

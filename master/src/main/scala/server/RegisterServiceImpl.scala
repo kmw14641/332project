@@ -1,5 +1,6 @@
 package server
 
+import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{WorkerInfo, RegisterWorkerResponse, RegisterServiceGrpc}
 import global.{MasterState, ConnectionManager}
@@ -8,6 +9,8 @@ import worker.WorkerService.WorkerServiceGrpc
 import worker.WorkerService.WorkerNetworkInfo
 
 class RegisterServiceImpl(implicit ec: ExecutionContext) extends RegisterServiceGrpc.RegisterService {
+  private val logger = LoggerFactory.getLogger(getClass)
+
   override def registerWorker(request: WorkerInfo): Future[RegisterWorkerResponse] = Future {
     val faultOccured = MasterState.registerWorker(request)
     ConnectionManager.registerWorkerChannel(request.ip, request.port)

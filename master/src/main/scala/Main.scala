@@ -1,3 +1,4 @@
+import org.slf4j.LoggerFactory
 import io.grpc.ServerBuilder
 import scala.concurrent.{ExecutionContext, Await}
 import scala.concurrent.duration._
@@ -8,6 +9,8 @@ import master.MasterService.{RegisterServiceGrpc, SamplingServiceGrpc, SyncAndSh
 import common.utils.SystemUtils
 
 object Main extends App {
+  private val logger = LoggerFactory.getLogger(getClass)
+  
   implicit val ec: ExecutionContext = ExecutionContext.global
 
   val workersNum = MasterOptionUtils.parse(args).getOrElse {
@@ -17,7 +20,7 @@ object Main extends App {
   MasterState.setWorkersNum(workersNum)
 
   val ip = SystemUtils.getLocalIp.getOrElse {
-    println("Failed to get local IP address")
+    logger.error("Failed to get local IP address")
     sys.exit(1)
   }
 
@@ -32,15 +35,15 @@ object Main extends App {
   server.start()
 
   val port = server.getPort
-  println(s"$ip:$port")
+  logger.info(s"$ip:$port")
 
   Await.result(MasterState.awaitShutdown, Duration.Inf)
   
-  println("Shutdown signal received. Initiating graceful shutdown...")
+  logger.info("Shutdown signal received. Initiating graceful shutdown...")
   server.shutdown()
   server.awaitTermination()
   
   // Cleanup after server termination
   ConnectionManager.shutdownAllChannels()
-  println("Master shutdown complete.")
+  logger.info("Master shutdown complete.")
 }

@@ -1,5 +1,6 @@
 package server
 
+import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future}
 import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, RangeAssignment, WorkerNetworkInfo, AssignRangesResponse, WorkerRangeAssignment, FileListMessage, FileListAck, StartShuffleCommand, StartShuffleAck, TerminateCommand, TerminateAck, IntroduceAck}
 import io.grpc.{Status, StatusException}
@@ -12,6 +13,7 @@ import state.TerminationState
 import global.StateRestoreManager
 
 class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc.WorkerService {
+  private val logger = LoggerFactory.getLogger(getClass)
   override def assignRanges(request: WorkersRangeAssignment): Future[AssignRangesResponse] = {
     val workersRangeAssignment = request.assignments.map {
       case workerRange => {
@@ -36,7 +38,7 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
       case ((ip, port), (start, end)) =>
         val startInt = new BigInteger(1, start.toByteArray())
         val endInt = new BigInteger(1, end.toByteArray())
-        println(s"Assigned range to worker $ip:$port => [${startInt.toString(16)}, ${endInt.toString(16)})")
+        logger.info(s"Assigned range to worker $ip:$port => [${startInt.toString(16)}, ${endInt.toString(16)})")
     }
 
     val response = Future.successful(
@@ -58,15 +60,14 @@ class WorkerServiceImpl(implicit ec: ExecutionContext) extends WorkerServiceGrpc
 
     // for debugging
     val fileNames = files.mkString(", ")
-    println(s"[Sync][RecvList] $senderIp -> files: [$fileNames]")
-    println(s"Received ${files.size} file descriptions from $senderIp")
-    
+    logger.info(s"[Sync][RecvList] $senderIp -> files: [$fileNames]")
+    logger.info(s"Received ${files.size} file descriptions from $senderIp")
     FileListAck(success = true)
   }
 
   override def startShuffle(request: StartShuffleCommand): Future[StartShuffleAck] = {
     if (!SynchronizationState.hasReceivedShuffleCommand) {
-      println(s"Received shuffle start command. Reason: ${request.reason}")
+      logger.info(s"Received shuffle start command. Reason: ${request.reason}")
     }
     /*
     By marking shuffleStartPromise to success, 
