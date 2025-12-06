@@ -57,7 +57,12 @@ object Main extends App {
 
   val mainWaiting = async {
     val masterFuture = async {
-      await { new RegisterManager().start(server.getPort) }
+      val isRegistered = await { new RegisterManager().start(server.getPort) }
+      if (!isRegistered) {
+        logger.error("Failed to register to master. Exiting...")
+        FileManager.deleteAllSubDir
+        sys.exit(1)
+      }
 
       await { new SampleManager().start() }
 

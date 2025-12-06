@@ -16,7 +16,7 @@ class RegisterManager(implicit ec: ExecutionContext) {
 
   private val stub = RegisterServiceGrpc.stub(ConnectionManager.getMasterChannel())
 
-  def start(port: Int): Future[Unit] = async {
+  def start(port: Int): Future[Boolean] = async {
     val workerIp = SystemUtils.getLocalIp
     val ramMb = SystemUtils.getRamMb
 
@@ -26,8 +26,8 @@ class RegisterManager(implicit ec: ExecutionContext) {
       ramMb = ramMb
     )
 
-    await { stub.registerWorker(request) }
+    val isRegistered = await { stub.registerWorker(request) }
 
-    ()
+    isRegistered.success
   }
 }

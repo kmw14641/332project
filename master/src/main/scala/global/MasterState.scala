@@ -31,21 +31,28 @@ object MasterState {
   }
 
   // returns whether it was duplicated (i.e. fault occured)
-  def registerWorker(request: WorkerInfo): Boolean = this.synchronized {
+  // (isRegistered, faultOccured)
+  def registerWorker(request: WorkerInfo): (Boolean, Boolean) = this.synchronized {
     val workerIp = request.ip
-    if (registeredWorkers.contains(workerIp)) {
+    val isAllWorkersRegistered = registeredWorkers.size == workersNum
+    val isContained = registeredWorkers.contains(workerIp)
+    if (isAllWorkersRegistered && !isContained) {
+      logger.warn(s"Warning: Extra worker registration attempt from $workerIp after all workers have been registered.")
+      return (false, false)
+    }
+
+    registeredWorkers += (workerIp -> request)
+    if (isContained) {
       logger.warn(s"Fault detected! Re-register worker($workerIp:${request.port})")
       logger.info(registeredWorkers.keys.mkString(", "))
-      registeredWorkers += (workerIp -> request)
-      true
     } else {
-      registeredWorkers += (workerIp -> request)
       if (registeredWorkers.size == workersNum) {
         logger.info("all worker registered")
         println(registeredWorkers.keys.mkString(", "))
       }
-      false
     }
+
+    (true, isContained)
   }
 
   def getRegisteredWorkers: Map[String, WorkerInfo] = this.synchronized { registeredWorkers }
