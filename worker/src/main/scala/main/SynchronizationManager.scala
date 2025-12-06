@@ -48,6 +48,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
       .find { case ((ip, _), _) => ip == selfIp }
       .map(_._2)
       .getOrElse(Nil)
+    logger.info(s"local file plan for $selfIp: ${localFiles.mkString(", ")}")
     SynchronizationState.setShufflePlan(selfIp, localFiles)
   }
 
@@ -55,14 +56,10 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   Consume worker-provided assignments and drop entries that point back to the current worker or are empty.
   */
   private def getOutgoingPlans(selfIp: String): Map[(String, Int), Seq[String]] = {
-    LabelingState.getAssignedFiles.foreach {
-      case ((ip, port), files) =>
-        logger.info(s"Preparing outgoing plan to $ip:$port with ${files.mkString(", ")} files.")
+    LabelingState.getAssignedFiles.collect {
+      case (endpoint, files) if endpoint._1 != selfIp && files.nonEmpty =>
+        endpoint -> files
     }
-      LabelingState.getAssignedFiles.collect {
-        case (endpoint, files) if endpoint._1 != selfIp && files.nonEmpty =>
-          endpoint -> files
-      }
   }
 
   /*

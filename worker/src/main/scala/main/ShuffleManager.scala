@@ -54,6 +54,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
                 case (workerIp, fileList) => Future.successful(copyLocalFiles(fileList))
             }
             await { Future.sequence(workerFutures) }
+            println("shuffle completed")
 
             ShuffleState.completeShuffle()
             StateRestoreManager.storeState()
@@ -75,7 +76,6 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
         fileList match {
             case Nil => ()
             case head :: tail => {
-                logger.info(s"Processing file [$workerIp, $head]")
                 await { retry { processFile(workerIp, head) } }
 
                 ShuffleState.completeShufflePlanFile(workerIp, head)
