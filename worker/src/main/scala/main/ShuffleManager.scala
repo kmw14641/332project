@@ -5,7 +5,7 @@ import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.concurrent.{ExecutionContext, Future, blocking, Promise}
 import global.WorkerState
 import io.grpc.ManagedChannelBuilder
-import shuffle.Shuffle.{ShuffleGrpc, DownloadRequest, DownloadResponse}
+import worker.WorkerService.{ShuffleServiceGrpc, DownloadRequest, DownloadResponse}
 import scala.async.Async.{async, await}
 import global.ConnectionManager
 import utils.FileManager
@@ -91,7 +91,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
     private def processFile(workerIp: String, filename: String, tries: Int = 1): Future[Unit] = {
         val promise = Promise[Unit]()
 
-        val stub = ShuffleGrpc.stub(ConnectionManager.getWorkerChannel(workerIp))
+        val stub = ShuffleServiceGrpc.stub(ConnectionManager.getWorkerChannel(workerIp))
         val targetPath = FileManager.getFilePathFromOutputDir(filename)
         val fileChannel: FileChannel = FileChannel.open(
             Paths.get(targetPath),

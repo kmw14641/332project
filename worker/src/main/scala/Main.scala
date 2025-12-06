@@ -15,7 +15,7 @@ import worker.WorkerService.WorkerServiceGrpc
 import main.{RegisterManager, SampleManager, MemorySortManager, FileMergeManager, LabelingManager, SynchronizationManager, ShuffleManager, TerminationManager}
 import utils.WorkerOptionUtils
 import utils.FileManager
-import shuffle.Shuffle.ShuffleGrpc
+import worker.WorkerService.ShuffleServiceGrpc
 import global.StateRestoreManager
 import scala.concurrent.Future
 import state.SampleState
@@ -56,7 +56,7 @@ object Main extends App {
     .forPort(0)
     .maxInboundMessageSize(ConnectionManager.maxGrpcMessageSize)
     .addService(WorkerServiceGrpc.bindService(new WorkerServiceImpl(), ec))
-    .addService(ShuffleGrpc.bindService(new ShuffleServiceImpl(FileManager.labelingDirName), ec))
+    .addService(ShuffleServiceGrpc.bindService(new ShuffleServiceImpl(FileManager.labelingDirName), ec))
     .build()
 
   server.start()

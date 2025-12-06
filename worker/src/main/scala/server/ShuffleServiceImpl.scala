@@ -3,7 +3,7 @@ package server
 import org.slf4j.LoggerFactory
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.concurrent.{ExecutionContext, Future, blocking}
-import shuffle.Shuffle.{DownloadRequest, DownloadResponse, ShuffleGrpc}
+import worker.WorkerService.{DownloadRequest, DownloadResponse, ShuffleServiceGrpc}
 import com.google.protobuf.ByteString
 import global.WorkerState
 import java.io.InputStream
@@ -16,7 +16,7 @@ import utils.FileManager
 import global.GlobalLock
 import utils.FileManager.InputSubDir
 
-class ShuffleServiceImpl(inputSubDirName: String)(implicit ec: ExecutionContext) extends ShuffleGrpc.Shuffle {
+class ShuffleServiceImpl(inputSubDirName: String)(implicit ec: ExecutionContext) extends ShuffleServiceGrpc.ShuffleService {
     private val logger = LoggerFactory.getLogger(getClass)
     implicit val inputSubDirNameImplicit: InputSubDir = InputSubDir(inputSubDirName)
     val chunkSize = 1024 * 1024 * 180
