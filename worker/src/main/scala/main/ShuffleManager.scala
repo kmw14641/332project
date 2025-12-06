@@ -47,7 +47,7 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
             val skippedFileNum = shufflePlansWithCompleted.values.flatMap(_.keys).size - shufflePlansToProcess.flatMap(_._2).size
             if (skippedFileNum != 0) logger.info(s"Skip $skippedFileNum files at shuffle")
 
-            val selfIp = SystemUtils.getLocalIp.get
+            val selfIp = SystemUtils.getLocalIp
 
             val workerFutures = shufflePlansToProcess.map {
                 case (workerIp, fileList) if workerIp != selfIp => processFilesSequentially(workerIp, fileList)

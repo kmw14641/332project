@@ -19,10 +19,7 @@ object Main extends App {
 
   MasterState.setWorkersNum(workersNum)
 
-  val ip = SystemUtils.getLocalIp.getOrElse {
-    logger.error("Failed to get local IP address")
-    sys.exit(1)
-  }
+  val ip = SystemUtils.getLocalIp
 
   val server = ServerBuilder
     .forPort(0)

@@ -17,10 +17,7 @@ class RegisterManager(implicit ec: ExecutionContext) {
   private val stub = RegisterServiceGrpc.stub(ConnectionManager.getMasterChannel())
 
   def start(port: Int): Future[Unit] = async {
-    val workerIp = SystemUtils.getLocalIp.getOrElse {
-        logger.error("Failed to get local IP address")
-        sys.exit(1)
-    }
+    val workerIp = SystemUtils.getLocalIp
     val ramMb = SystemUtils.getRamMb
 
     val request = WorkerInfo(

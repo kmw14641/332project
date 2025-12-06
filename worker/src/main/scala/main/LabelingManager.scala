@@ -53,7 +53,7 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
       (filename, firstKey, lastKey)
     }
     
-    val from = SystemUtils.getLocalIp.getOrElse(throw new IllegalStateException("Could not determine local IP address"))
+    val from = SystemUtils.getLocalIp
     val comparator = getKeyOrdering
     
     @tailrec

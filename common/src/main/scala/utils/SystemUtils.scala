@@ -3,7 +3,7 @@ package common.utils
 import java.net.InetAddress
 
 object SystemUtils {
-  def getLocalIp: Option[String] = scala.util.Try(InetAddress.getLocalHost.getHostAddress).toOption
+  def getLocalIp: String = InetAddress.getLocalHost.getHostAddress
 
   def getRamMb: Long = {
     val runtime = Runtime.getRuntime

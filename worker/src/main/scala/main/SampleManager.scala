@@ -42,10 +42,7 @@ class SampleManager(implicit ec: ExecutionContext) {
         logger.info("Skip send sample")
     }
     else {
-      val workerIp = SystemUtils.getLocalIp.getOrElse {
-          logger.error("Failed to get local IP address")
-        sys.exit(1)
-      }
+      val workerIp = SystemUtils.getLocalIp
 
       val samples = await { sampleFromInputs }
     

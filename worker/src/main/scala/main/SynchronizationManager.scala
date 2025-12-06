@@ -28,9 +28,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   private val masterStub = MasterService.SyncServiceGrpc.stub(ConnectionManager.getMasterChannel())
 
   def start(): Future[Map[String, Seq[String]]] = {
-    val selfIp = SystemUtils.getLocalIp.getOrElse(
-      throw new IllegalStateException("Failed to determine local IP. Abort synchronization.")
-    )
+    val selfIp = SystemUtils.getLocalIp
 
     async {
       addLocalPlan(selfIp)
