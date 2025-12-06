@@ -10,8 +10,8 @@ object RetryUtils {
   
   def retry[T](operation: => Future[T], tries: Int = 1)(implicit ec: ExecutionContext): Future[T] = {
     operation.recoverWith {
-      case _ if tries < maxTries =>
-        logger.info(s"Retrying, attempt #$tries")
+      case e if tries < maxTries =>
+        logger.warn(s"Retrying, attempt #$tries due to an error: $e")
         blocking { Thread.sleep(math.pow(2, tries).toLong * 1000) }
         retry(operation, tries + 1)
     }
