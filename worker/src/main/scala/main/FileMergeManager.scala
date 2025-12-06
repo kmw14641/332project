@@ -59,13 +59,13 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
     
     // Calculate number of merge rounds needed
     val totalRounds = Math.ceil(Math.log(fileLists.size) / Math.log(2)).toInt
-    logger.info(s"[MergeSort] Total merge rounds needed: $totalRounds")
+    logger.info(s"Total merge rounds needed: $totalRounds")
 
     val finalListsFuture = (1 to totalRounds).foldLeft(Future.successful(fileLists)) {
       (prevFuture, round) => async {
         val lists = await { prevFuture }
         
-        logger.info(s"[MergeSort] Starting merge round $round/$totalRounds with ${lists.size} file lists")
+        logger.info(s"Starting merge round $round/$totalRounds with ${lists.size} file lists")
         
         // Pair up file lists
         // [[1],[2],[3],[4]] -> [([1],[3]), ([2],[4])]
@@ -86,11 +86,11 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
         val futures = listPairs.toList.map { case (list1, list2) =>
           async {
             val threadId = Thread.currentThread().getName
-            logger.info(s"[MergeSort-Round$round][$threadId] Merging list pair: ${list1.size} files + ${list2.size} files")
+            logger.info(s"[Round$round][$threadId] Merging list pair: ${list1.size} files + ${list2.size} files")
             val outputFiles = mergeFileLists(list1, list2, threadId, round)
             
             nextFileLists.add(outputFiles)
-            logger.info(s"[MergeSort-Round$round][$threadId] Completed merge: ${outputFiles.size} output files")
+            logger.info(s"[Round$round][$threadId] Completed merge: ${outputFiles.size} output files")
           }
         }
 
@@ -122,7 +122,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
 
     private def loadIterator(filePath: String): BufferedIterator[Record] = {
       val numRecords = (FileManager.getFilesize(filePath) / RECORD_SIZE).toInt
-      logger.info(s"[MergeSort-Round] Loading file: $filePath ($numRecords records)")
+      logger.info(s"Loading file: $filePath ($numRecords records)")
       FileManager.readRecords(filePath, 0, numRecords).iterator.buffered
     }
 
@@ -167,7 +167,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
     val avgRecordsPerFile = Math.ceil(totalRecords.toDouble / allFiles.size).toInt
     val targetChunkSize = Math.max(avgRecordsPerFile, 1)
     
-    logger.info(s"[MergeSort-Round$round][$threadId] Merging ${filePathList1.size} + ${filePathList2.size} files, avg chunk size: $targetChunkSize records")
+    logger.info(s"[Round$round][$threadId] Merging ${filePathList1.size} + ${filePathList2.size} files, avg chunk size: $targetChunkSize records")
 
     val iter1 = new MultiFileIterator(filePathList1).buffered
     val iter2 = new MultiFileIterator(filePathList2).buffered
@@ -183,7 +183,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
         val outputFilename = FileManager.getRandomFilename
         val outputPath = FileManager.getFilePathFromOutputDir(outputFilename)
         FileManager.writeRecords(outputPath, buffer.toArray)
-        logger.info(s"[MergeSort-Round$round][$threadId] Writing output file: $outputPath (${buffer.size} records)")
+        logger.info(s"[Round$round][$threadId] Writing output file: $outputPath (${buffer.size} records)")
         buffer.clear()
         mergeLoop(buffer, outputFilename :: outputFiles)
       } else if (iter1.hasNext && iter2.hasNext) {
@@ -204,7 +204,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
           val outputFilename = FileManager.getRandomFilename
           val outputPath = FileManager.getFilePathFromOutputDir(outputFilename)
           FileManager.writeRecords(outputPath, buffer.toArray)
-          logger.info(s"[MergeSort-Round$round][$threadId] Writing output file: $outputPath (${buffer.size} records)")
+          logger.info(s"[Round$round][$threadId] Writing output file: $outputPath (${buffer.size} records)")
           (outputFilename :: outputFiles).reverse
         } else {
           outputFiles.reverse
@@ -217,7 +217,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
     // Delete input files that were merged
     FileManager.deleteAll(allFiles)
     
-    logger.info(s"[MergeSort-Round$round][$threadId] Merge complete: ${result.size} output files")
+    logger.info(s"[Round$round][$threadId] Merge complete: ${result.size} output files")
     result
   }
 }

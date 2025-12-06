@@ -39,7 +39,7 @@ class SampleManager(implicit ec: ExecutionContext) {
 
   def start(): Future[Unit] = async {
     if (SampleState.isSendSampleCompleted) {
-        logger.info("[StateRestore] Skip send sample")
+        logger.info("Skip send sample")
     }
     else {
       val workerIp = SystemUtils.getLocalIp.getOrElse {

@@ -21,7 +21,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   labeledFiles.foreach {
     case ((ip, port), files) =>
       val fileNames = files.mkString(", ")
-      logger.info(s"[Sync][Assigned] $ip:$port files: [$fileNames]")
+      logger.info(s"Assigned $ip:$port files: [$fileNames]")
   }
   
   LabelingState.setAssignedFiles(labeledFiles)  // TODO: do at labeling phase
@@ -29,7 +29,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
 
   def start(): Future[Map[String, Seq[String]]] = {
     val selfIp = SystemUtils.getLocalIp.getOrElse(
-      throw new IllegalStateException("[Sync] Failed to determine local IP. Abort synchronization.")
+      throw new IllegalStateException("Failed to determine local IP. Abort synchronization.")
     )
 
     async {
@@ -39,7 +39,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
       await(notifyMasterOfCompletion(selfIp))
       await(SynchronizationState.waitForShuffleCommand)
 
-      logger.info("[Sync] Master authorized shuffle phase. Ready for file transfers.")
+      logger.info("Master authorized shuffle phase. Ready for file transfers.")
 
       SynchronizationState.getShufflePlans
     }
@@ -59,7 +59,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   private def getOutgoingPlans(selfIp: String): Map[(String, Int), Seq[String]] = {
     LabelingState.getAssignedFiles.foreach {
       case ((ip, port), files) =>
-        logger.info(s"[Sync] Preparing outgoing plan to $ip:$port with ${files.mkString(", ")} files.")
+        logger.info(s"Preparing outgoing plan to $ip:$port with ${files.mkString(", ")} files.")
     }
       LabelingState.getAssignedFiles.collect {
         case (endpoint, files) if endpoint._1 != selfIp && files.nonEmpty =>
@@ -74,10 +74,10 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   */
   private def transmitPlans(plans: Map[(String, Int), Seq[String]], selfIp: String): Future[Unit] = async {
     if (SynchronizationState.isTransmitCompleted) {
-      logger.info("[StateRestore] Skip transmitPlans")
+      logger.info("Skip transmitPlans")
       ()
     } else if (plans.isEmpty) {
-      logger.info("[Sync] No outgoing files to report.")
+      logger.info("No outgoing files to report.")
       ()
     } 
     else {
@@ -85,7 +85,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
         retry {
           async {
             val fileNames = files.mkString(", ")
-            logger.info(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
+            logger.info(s"SendList $selfIp -> $ip:$port files: [$fileNames]")
 
             val stub = WorkerService.SyncServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
             val request = FileListMessage(
@@ -94,7 +94,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
             )
 
             await { stub.deliverFileList(request) }
-            logger.info(s"[Sync] Delivered ${files.size} file descriptors to $ip:$port")
+            logger.info(s"Delivered ${files.size} file descriptors to $ip:$port")
           }
         }
       }
@@ -108,18 +108,18 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
 
   private def notifyMasterOfCompletion(workerIp: String): Future[Unit] = async {
     if (SynchronizationState.isReportCompleted) {
-      logger.info("[StateRestore] Skip synchronization report")
+      logger.info("Skip synchronization report")
       ()
     }
     else {
       val request = SyncPhaseReport(workerIp = workerIp)
       await {masterStub.reportSyncCompletion(request).andThen {
         case Success(_) =>
-          logger.info("[Sync] Synchronization completed. Waiting for master's shuffle command...")
+          logger.info("Synchronization completed. Waiting for master's shuffle command...")
           SynchronizationState.completeReport()
           StateRestoreManager.storeState()
         case Failure(e) =>
-          logger.error(s"[Sync] Failed to report synchronization completion: ${e.getMessage}")
+          logger.error(s"Failed to report synchronization completion: ${e.getMessage}")
         }
       }
     }

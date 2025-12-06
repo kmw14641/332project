@@ -26,7 +26,7 @@ class SyncServiceImpl(implicit ec: ExecutionContext) extends SyncServiceGrpc.Syn
 
     // for debugging
     val fileNames = files.mkString(", ")
-    logger.info(s"[Sync][RecvList] $senderIp -> files: [$fileNames]")
+    logger.info(s"RecvList $senderIp -> files: [$fileNames]")
     logger.info(s"Received ${files.size} file descriptions from $senderIp")
     FileListAck(success = true)
   }

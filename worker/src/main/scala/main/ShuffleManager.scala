@@ -39,13 +39,13 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
         }
 
         if (ShuffleState.isShuffleCompleted) {
-            logger.info("[StateRestore] Skip shuffle")
+            logger.info("Skip shuffle")
         } else {
             val shufflePlansToProcess: Seq[(String, Seq[String])] = shufflePlansWithCompleted.view
                 .mapValues(_.filter(_._2 == false).keys.toSeq).toSeq  // false인것만 seq of seq로 변환
 
             val skippedFileNum = shufflePlansWithCompleted.values.flatMap(_.keys).size - shufflePlansToProcess.flatMap(_._2).size
-            if (skippedFileNum != 0) logger.info(s"[StateRestore] Skip $skippedFileNum files at shuffle")
+            if (skippedFileNum != 0) logger.info(s"Skip $skippedFileNum files at shuffle")
 
             val selfIp = SystemUtils.getLocalIp.get
 

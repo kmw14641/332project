@@ -197,7 +197,7 @@ object FileManager {
               .forEach { path =>
                 Files.deleteIfExists(path)
               }
-            logger.info(s"[FileManager] Deleted sub-directory: $subDirPath")
+            logger.info(s"Deleted sub-directory: $subDirPath")
           } catch {
             case e: Exception =>
               logger.warn(s"Failed to delete sub-directory $subDirPath: ${e.getMessage}")
