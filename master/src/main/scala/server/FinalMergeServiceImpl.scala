@@ -4,7 +4,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{FinalMergePhaseReport, FinalMergePhaseAck, FinalMergeServiceGrpc}
 import global.{MasterState, ConnectionManager}
-import worker.WorkerService.{WorkerServiceGrpc, TerminateCommand}
+import worker.WorkerService.{TerminationServiceGrpc, TerminateCommand}
 
 class FinalMergeServiceImpl(implicit ec: ExecutionContext) extends FinalMergeServiceGrpc.FinalMergeService {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -28,7 +28,7 @@ class FinalMergeServiceImpl(implicit ec: ExecutionContext) extends FinalMergeSer
 
     val workers = MasterState.getRegisteredWorkers
     val terminateFutures = workers.map { case (ip, info) =>
-      val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+      val stub = TerminationServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
       val request = TerminateCommand(reason = "")
       stub.terminate(request).map(_ => ()).recover {
         case e: Exception => 

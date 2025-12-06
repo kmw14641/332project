@@ -2,27 +2,14 @@ syntax = "proto3";
 
 package worker;
 
-// Worker service for receiving range assignments
-service WorkerService {
-  // Master assigns a range to the worker
-  rpc AssignRanges (WorkersRangeAssignment) returns (AssignRangesResponse) {}
-
-  // Sender notifies receiver about the files that should be delivered during shuffle phase
-  rpc DeliverFileList (FileListMessage) returns (FileListAck) {}
-
-  // Master notifies workers to start shuffle phase simultaneously
-  rpc StartShuffle (StartShuffleCommand) returns (StartShuffleAck) {}
-
-  // Master notifies workers to terminate
-  rpc Terminate (TerminateCommand) returns (TerminateAck) {}
-
-  // Master introduces new worker port
-  rpc IntroduceNewWorker (WorkerNetworkInfo) returns (IntroduceAck) {}
-}
-
 message WorkerNetworkInfo {
   string ip = 1;
   int32 port = 2;
+}
+
+service SampleService {
+  // Master assigns a range to the worker
+  rpc AssignRanges (WorkersRangeAssignment) returns (AssignRangesResponse);
 }
 
 // Range assignment sent from master to worker
@@ -43,6 +30,14 @@ message WorkersRangeAssignment {
 // Response from worker after receiving range
 message AssignRangesResponse {
   bool success = 1;
+}
+
+
+service SyncService {
+  // Sender notifies receiver about the files that should be delivered during shuffle phase
+  rpc DeliverFileList (FileListMessage) returns (FileListAck);
+  // Master notifies workers to start shuffle phase simultaneously
+  rpc StartShuffle (StartShuffleCommand) returns (StartShuffleAck);
 }
 
 message FileListMessage {
@@ -74,12 +69,23 @@ message DownloadResponse {
 	bytes data = 1;
 }
 
+
+service TerminationService {
+  // Master notifies workers to terminate
+  rpc Terminate (TerminateCommand) returns (TerminateAck);
+}
+
 message TerminateCommand {
   string reason = 1;
 }
 
 message TerminateAck {
   bool success = 1;
+}
+
+service RegisterService {
+  // Master introduces new worker port
+  rpc IntroduceNewWorker (WorkerNetworkInfo) returns (IntroduceAck);
 }
 
 message IntroduceAck {

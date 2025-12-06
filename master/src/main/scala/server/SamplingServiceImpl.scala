@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import scala.async.Async.{async, await}
 import master.MasterService.{SampleData, SampleResponse, SamplingServiceGrpc}
 import global.{MasterState, ConnectionManager}
-import worker.WorkerService.{WorkerServiceGrpc, WorkersRangeAssignment, WorkerRangeAssignment, WorkerNetworkInfo, RangeAssignment}
+import worker.WorkerService.{SampleServiceGrpc, WorkersRangeAssignment, WorkerRangeAssignment, WorkerNetworkInfo, RangeAssignment}
 import common.utils.RetryUtils.retry
 
 class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingServiceGrpc.SamplingService {
@@ -49,7 +49,7 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
     for ((ip, info) <- workers) {
       retry {
         async {
-          val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+          val stub = SampleServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
           await { stub.assignRanges(request) }
         }
       }

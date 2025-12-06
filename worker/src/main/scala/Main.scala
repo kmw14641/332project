@@ -10,15 +10,14 @@ import io.grpc.ServerBuilder
 import common.utils.SystemUtils
 import global.WorkerState
 import global.ConnectionManager
-import server.{WorkerServiceImpl, ShuffleServiceImpl}
-import worker.WorkerService.WorkerServiceGrpc
+import server.{RegisterServiceImpl, SampleServiceImpl, ShuffleServiceImpl, SyncServiceImpl, TerminationServiceImpl}
 import main.{RegisterManager, SampleManager, MemorySortManager, FileMergeManager, LabelingManager, SynchronizationManager, ShuffleManager, TerminationManager}
 import utils.WorkerOptionUtils
 import utils.FileManager
-import worker.WorkerService.ShuffleServiceGrpc
 import global.StateRestoreManager
 import scala.concurrent.Future
 import state.SampleState
+import worker.WorkerService.{RegisterServiceGrpc, SampleServiceGrpc, ShuffleServiceGrpc, SyncServiceGrpc, TerminationServiceGrpc}
 
 object Main extends App {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -55,8 +54,11 @@ object Main extends App {
   val server = ServerBuilder
     .forPort(0)
     .maxInboundMessageSize(ConnectionManager.maxGrpcMessageSize)
-    .addService(WorkerServiceGrpc.bindService(new WorkerServiceImpl(), ec))
+    .addService(RegisterServiceGrpc.bindService(new RegisterServiceImpl(), ec))
+    .addService(SampleServiceGrpc.bindService(new SampleServiceImpl(), ec))
+    .addService(SyncServiceGrpc.bindService(new SyncServiceImpl(), ec))
     .addService(ShuffleServiceGrpc.bindService(new ShuffleServiceImpl(FileManager.labelingDirName), ec))
+    .addService(TerminationServiceGrpc.bindService(new TerminationServiceImpl(), ec))
     .build()
 
   server.start()

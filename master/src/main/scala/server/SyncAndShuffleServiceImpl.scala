@@ -4,7 +4,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future}
 import master.MasterService.{SyncPhaseReport, SyncPhaseAck, SyncAndShuffleServiceGrpc}
 import global.{MasterState, ConnectionManager}
-import worker.WorkerService.{WorkerServiceGrpc, StartShuffleCommand}
+import worker.WorkerService.{SyncServiceGrpc, StartShuffleCommand}
 import scala.async.Async.{async, await}
 import common.utils.RetryUtils.retry
 
@@ -37,7 +37,7 @@ class SyncAndShuffleServiceImpl(implicit ec: ExecutionContext) extends SyncAndSh
     workers.foreach { case (ip, info) =>
       retry {
         async {
-          val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+          val stub = SyncServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
           val request = StartShuffleCommand(reason = "Shuffle phase start")
           await { stub.startShuffle(request) }
         }

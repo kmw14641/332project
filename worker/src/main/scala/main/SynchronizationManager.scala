@@ -7,7 +7,7 @@ import master.MasterService.{SyncAndShuffleServiceGrpc, SyncPhaseReport}
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import worker.WorkerService.{FileListMessage, WorkerServiceGrpc}
+import worker.WorkerService.{FileListMessage, SyncServiceGrpc}
 import state.LabelingState
 import state.SynchronizationState
 import global.StateRestoreManager
@@ -85,7 +85,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
             val fileNames = files.mkString(", ")
             logger.info(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
 
-            val stub = WorkerServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+            val stub = SyncServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
             val request = FileListMessage(
               senderIp = selfIp,
               files = files
