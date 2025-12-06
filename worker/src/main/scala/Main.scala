@@ -27,12 +27,7 @@ object Main extends App {
     sys.exit(1)
   }
 
-  val invalidInputDirs = inputDirs.filter{ dir => !Files.exists(Paths.get(dir)) || !Files.isDirectory(Paths.get(dir)) }
-
-  if (invalidInputDirs.nonEmpty) {
-    invalidInputDirs.foreach { dir =>
-      logger.error(s"Input directory does not exist or is not a directory: $dir")
-    }
+  if (!WorkerOptionUtils.validateInputFiles(inputDirs)) {
     sys.exit(1)
   }
 

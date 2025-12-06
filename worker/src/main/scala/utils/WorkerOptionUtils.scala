@@ -4,6 +4,9 @@ import scala.util.Try
 import scala.collection.mutable.ArrayBuffer
 import scopt.OParser
 import java.net.InetAddress
+import java.nio.file.Files
+import java.nio.file.Paths
+import org.slf4j.LoggerFactory
 
 case class WorkerConfig(
   masterIp: String = "",
@@ -13,6 +16,8 @@ case class WorkerConfig(
 )
 
 object WorkerOptionUtils {
+  private val logger = LoggerFactory.getLogger(getClass)
+
   private def getParser: OParser[Unit, WorkerConfig] = {
     val builder = OParser.builder[WorkerConfig]
     val parser = {
@@ -103,5 +108,17 @@ object WorkerOptionUtils {
     OParser.parse(getParser, processedArgs, WorkerConfig()).map {
       config => (config.masterIp, config.masterPort, config.inputDirectories, config.outputDirectory)
     }
+  }
+
+  def validateInputFiles(inputDirs: Seq[String]): Boolean = {
+    val invalidInputDirs = inputDirs.filter{ dir => !Files.exists(Paths.get(dir)) || !Files.isDirectory(Paths.get(dir)) }
+
+    if (invalidInputDirs.nonEmpty) {
+      invalidInputDirs.foreach { dir =>
+        println(s"Input directory does not exist or is not a directory: $dir")
+      }
+    }
+
+    invalidInputDirs.isEmpty
   }
 }
