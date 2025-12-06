@@ -13,8 +13,8 @@ import com.google.protobuf.ByteString
 
 import common.utils.SystemUtils
 import common.data.Data.{Key, Record, getRecordOrdering, getKeyOrdering, RECORD_SIZE, KEY_SIZE}
-import utils.FileManager
-import utils.FileManager.{InputSubDir, OutputSubDir}
+import global.FileManager
+import global.FileManager.{InputSubDir, OutputSubDir}
 
 class LabelingManager(inputSubDirName: String, outputSubDirName: String, assignedRange: Map[(String, Int), (Key, Key)])(implicit ec: ExecutionContext) {
   private val logger = LoggerFactory.getLogger(getClass)

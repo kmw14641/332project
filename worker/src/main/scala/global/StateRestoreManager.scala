@@ -2,7 +2,6 @@ package global
 
 import java.io._
 import global.WorkerState
-import utils.FileManager
 import scala.util.Using
 
 object StateRestoreManager {

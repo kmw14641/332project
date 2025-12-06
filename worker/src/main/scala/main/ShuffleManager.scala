@@ -8,13 +8,13 @@ import io.grpc.ManagedChannelBuilder
 import worker.WorkerService.{ShuffleServiceGrpc, DownloadRequest, DownloadResponse}
 import scala.async.Async.{async, await}
 import global.ConnectionManager
-import utils.FileManager
+import global.FileManager
 import io.grpc.stub.{StreamObserver, ClientCallStreamObserver, ClientResponseObserver}
 import java.nio.channels.FileChannel
 import common.utils.SystemUtils
 import global.GlobalLock
 import common.utils.RetryUtils.retry
-import utils.FileManager.{InputSubDir, OutputSubDir}
+import global.FileManager.{InputSubDir, OutputSubDir}
 import global.StateRestoreManager
 import scala.collection.mutable
 import state.ShuffleState

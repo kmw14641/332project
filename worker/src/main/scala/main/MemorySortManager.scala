@@ -9,9 +9,10 @@ import scala.annotation.tailrec
 import scala.async.Async.async
 
 import common.data.Data.{getRecordOrdering, RECORD_SIZE}
-import utils.{ThreadpoolUtils, FileManager}
-import utils.FileManager
-import utils.FileManager.OutputSubDir
+import utils.{ThreadpoolUtils}
+import global.FileManager
+import global.FileManager
+import global.FileManager.OutputSubDir
 
 class MemorySortManager(outputSubDirName: String) {
   private val logger = LoggerFactory.getLogger(getClass)

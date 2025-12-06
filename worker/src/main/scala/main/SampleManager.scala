@@ -25,7 +25,7 @@ import common.utils.SystemUtils
 import master.MasterService.{SamplingServiceGrpc, SampleData}
 import master.MasterService.SampleData
 import global.ConnectionManager
-import utils.FileManager
+import global.FileManager
 import global.StateRestoreManager
 import global.WorkerState
 import state.SampleState

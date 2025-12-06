@@ -12,9 +12,9 @@ import java.nio.channels.FileChannel
 import java.nio.ByteBuffer
 import io.grpc.stub.{StreamObserver, ServerCallStreamObserver}
 import java.util.concurrent.atomic.AtomicBoolean
-import utils.FileManager
+import global.FileManager
 import global.GlobalLock
-import utils.FileManager.InputSubDir
+import global.FileManager.InputSubDir
 
 class ShuffleServiceImpl(inputSubDirName: String)(implicit ec: ExecutionContext) extends ShuffleServiceGrpc.ShuffleService {
     private val logger = LoggerFactory.getLogger(getClass)

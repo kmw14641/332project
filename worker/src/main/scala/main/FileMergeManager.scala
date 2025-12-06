@@ -11,8 +11,9 @@ import scala.async.Async.{async, await}
 import scala.annotation.tailrec
 
 import common.data.Data.{Record, getRecordOrdering, RECORD_SIZE}
-import utils.{ThreadpoolUtils, FileManager}
-import utils.FileManager.{InputSubDir, OutputSubDir}
+import utils.{ThreadpoolUtils}
+import global.FileManager
+import global.FileManager.{InputSubDir, OutputSubDir}
 import java.nio.file.Files
 import java.nio.file.Paths
 

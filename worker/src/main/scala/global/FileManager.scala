@@ -1,4 +1,4 @@
-package utils
+package global
 
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer

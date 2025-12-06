@@ -13,7 +13,7 @@ import global.ConnectionManager
 import server.{RegisterServiceImpl, SampleServiceImpl, ShuffleServiceImpl, SyncServiceImpl, TerminationServiceImpl}
 import main.{RegisterManager, SampleManager, MemorySortManager, FileMergeManager, LabelingManager, SynchronizationManager, ShuffleManager, TerminationManager}
 import utils.WorkerOptionUtils
-import utils.FileManager
+import global.FileManager
 import global.StateRestoreManager
 import scala.concurrent.Future
 import state.SampleState
