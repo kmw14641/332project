@@ -3,11 +3,13 @@ package main
 import org.slf4j.LoggerFactory
 import common.utils.SystemUtils
 import global.{ConnectionManager, WorkerState}
-import master.MasterService.{SyncAndShuffleServiceGrpc, SyncPhaseReport}
+import master.MasterService.{SyncPhaseReport}
+import master.MasterService
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import worker.WorkerService.{FileListMessage, SyncServiceGrpc}
+import worker.WorkerService.{FileListMessage}
+import worker.WorkerService
 import state.LabelingState
 import state.SynchronizationState
 import global.StateRestoreManager
@@ -23,7 +25,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
   }
   
   LabelingState.setAssignedFiles(labeledFiles)  // TODO: do at labeling phase
-  private val masterStub = SyncAndShuffleServiceGrpc.stub(ConnectionManager.getMasterChannel())
+  private val masterStub = MasterService.SyncServiceGrpc.stub(ConnectionManager.getMasterChannel())
 
   def start(): Future[Map[String, Seq[String]]] = {
     val selfIp = SystemUtils.getLocalIp.getOrElse(
@@ -85,7 +87,7 @@ class SynchronizationManager(labeledFiles: Map[(String, Int), List[String]])(imp
             val fileNames = files.mkString(", ")
             logger.info(s"[Sync][SendList] $selfIp -> $ip:$port files: [$fileNames]")
 
-            val stub = SyncServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
+            val stub = WorkerService.SyncServiceGrpc.stub(ConnectionManager.getWorkerChannel(ip))
             val request = FileListMessage(
               senderIp = selfIp,
               files = files

@@ -36,7 +36,7 @@ message SampleResponse {
 }
 
 // Synchronization and shuffle coordination service
-service SyncAndShuffleService {
+service SyncService {
   rpc ReportSyncCompletion (SyncPhaseReport) returns (SyncPhaseAck) {}
 }
 

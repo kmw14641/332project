@@ -3,9 +3,9 @@ import io.grpc.ServerBuilder
 import scala.concurrent.{ExecutionContext, Await}
 import scala.concurrent.duration._
 import utils.MasterOptionUtils
-import server.{RegisterServiceImpl, SamplingServiceImpl, SyncAndShuffleServiceImpl, FinalMergeServiceImpl}
+import server.{RegisterServiceImpl, SamplingServiceImpl, SyncServiceImpl, FinalMergeServiceImpl}
 import global.{MasterState, ConnectionManager}
-import master.MasterService.{RegisterServiceGrpc, SamplingServiceGrpc, SyncAndShuffleServiceGrpc, FinalMergeServiceGrpc}
+import master.MasterService.{RegisterServiceGrpc, SamplingServiceGrpc, SyncServiceGrpc, FinalMergeServiceGrpc}
 import common.utils.SystemUtils
 
 object Main extends App {
@@ -28,7 +28,7 @@ object Main extends App {
     .forPort(0)
     .addService(RegisterServiceGrpc.bindService(new RegisterServiceImpl(), ec))
     .addService(SamplingServiceGrpc.bindService(new SamplingServiceImpl(), ec))
-    .addService(SyncAndShuffleServiceGrpc.bindService(new SyncAndShuffleServiceImpl(), ec))
+    .addService(SyncServiceGrpc.bindService(new SyncServiceImpl(), ec))
     .addService(FinalMergeServiceGrpc.bindService(new FinalMergeServiceImpl(), ec))
     .build()
 
