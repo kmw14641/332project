@@ -115,7 +115,7 @@ object WorkerOptionUtils {
 
     if (invalidInputDirs.nonEmpty) {
       invalidInputDirs.foreach { dir =>
-        println(s"Input directory does not exist or is not a directory: $dir")
+        logger.error(s"Input directory does not exist or is not a directory: $dir")
       }
     }
 
