@@ -42,7 +42,7 @@ object MasterState {
       registeredWorkers += (workerIp -> request)
       if (registeredWorkers.size == workersNum) {
         logger.info("all worker registered")
-        logger.info(registeredWorkers.keys.mkString(", "))
+        println(registeredWorkers.keys.mkString(", "))
       }
       false
     }

@@ -35,7 +35,7 @@ object Main extends App {
   server.start()
 
   val port = server.getPort
-  logger.info(s"$ip:$port")
+  println(s"$ip:$port")
 
   Await.result(MasterState.awaitShutdown, Duration.Inf)
   
