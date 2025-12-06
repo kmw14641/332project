@@ -23,13 +23,8 @@ object Main extends App {
   private val logger = LoggerFactory.getLogger(getClass)
   implicit val ec: ExecutionContext = ExecutionContext.global
 
-  val (masterAddr, inputDirs, outputDir) = WorkerOptionUtils.parse(args).getOrElse {
+  val (masterIp, masterPort, inputDirs, outputDir) = WorkerOptionUtils.parse(args).getOrElse {
     sys.exit(1)
-  }
-  
-  val (masterIp, masterPort) = {
-    val parts = masterAddr.split(":")
-    (parts(0), parts(1).toInt)
   }
 
   val invalidInputDirs = inputDirs.filter{ dir => !Files.exists(Paths.get(dir)) || !Files.isDirectory(Paths.get(dir)) }
