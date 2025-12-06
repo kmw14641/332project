@@ -7,21 +7,6 @@ service RegisterService {
   rpc RegisterWorker (WorkerInfo) returns (RegisterWorkerResponse) {}
 }
 
-// Sampling service for key distribution
-service SamplingService {
-  rpc Sampling (SampleData) returns (SampleResponse) {}
-}
-
-// Synchronization and shuffle coordination service
-service SyncAndShuffleService {
-  rpc ReportSyncCompletion (SyncPhaseReport) returns (SyncPhaseAck) {}
-}
-
-// Final merge completion service
-service FinalMergeService {
-  rpc ReportFinalMergeCompletion (FinalMergePhaseReport) returns (FinalMergePhaseAck) {}
-}
-
 // Worker information sent during registration
 message WorkerInfo {
   string ip = 1;
@@ -32,6 +17,11 @@ message WorkerInfo {
 // Response from master after worker registration
 message RegisterWorkerResponse {
   bool success = 1;
+}
+
+// Sampling service for key distribution
+service SamplingService {
+  rpc Sampling (SampleData) returns (SampleResponse) {}
 }
 
 // Sampled keys sent from worker to master
@@ -45,6 +35,11 @@ message SampleResponse {
   bool success = 1;
 }
 
+// Synchronization and shuffle coordination service
+service SyncAndShuffleService {
+  rpc ReportSyncCompletion (SyncPhaseReport) returns (SyncPhaseAck) {}
+}
+
 // Report message for synchronization phase completion
 message SyncPhaseReport {
   string worker_ip = 1;
@@ -52,6 +47,11 @@ message SyncPhaseReport {
 
 message SyncPhaseAck {
   bool success = 1;
+}
+
+// Final merge completion service
+service FinalMergeService {
+  rpc ReportFinalMergeCompletion (FinalMergePhaseReport) returns (FinalMergePhaseAck) {}
 }
 
 // Report message for final merge phase completion
