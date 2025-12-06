@@ -51,16 +51,9 @@ class SampleManager(implicit ec: ExecutionContext) {
         keys = samples
       )
 
-      val responseFuture = stub.sampling(request)
-      val success = await { responseFuture }.success
-    
-      if (success) {
-          logger.info("Samples sent successfully. Waiting for range assignment...")
-        SampleState.completeSendSample()
-        StateRestoreManager.storeState()
-      } else {
-          logger.error("Failed to send samples to master")
-      }
+      await { stub.sampling(request) }
+
+      logger.info("Samples sent successfully. Waiting for range assignment...")
     }
   }
 
