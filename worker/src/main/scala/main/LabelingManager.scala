@@ -143,7 +143,7 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
     val finalAssignments = sortedWorkers.foldLeft((fileMetadata, Map.empty[(String, Int), List[String]])) {
       case ((files, assignments), (workerId, (rangeStart, rangeEnd))) =>
         val (remainingFiles, newAssignments) = processFiles(workerId, rangeStart, rangeEnd, files, assignments)
-        logger.info(s"Processing worker ${workerId._1}")
+        logger.info(s"Assignment for worker ${workerId._1} processed")
         (remainingFiles, newAssignments)
     }
     val result = finalAssignments._2.map { case (k, v) => k -> v.reverse }

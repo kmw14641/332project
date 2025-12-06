@@ -79,12 +79,6 @@ object Main extends App {
     
     val labeledFiles = await { new LabelingManager(FileManager.fileMergeDirName, FileManager.labelingDirName, assignedRange).start(sortedFiles) }
 
-    labeledFiles.foreach {
-      case (workerId, fileList) =>
-        val fileNames = fileList.mkString(", ")
-        logger.info(s"[Labeling][Assigned] ${workerId._1}:${workerId._2} files: [$fileNames]")
-    }
-
     val shufflePlans =  await { new SynchronizationManager(labeledFiles).start() }
 
     shufflePlans.foreach {
