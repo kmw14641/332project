@@ -74,8 +74,9 @@ object Main extends App {
 
     val (_, sortedFiles) = await { masterFuture.zip(localFuture) }
 
-    val assignedRange = SampleState.getAssignedRange.getOrElse(throw new RuntimeException("Assigned range is not available"))
+    val assignedRange = SampleState.getAssignedRange.get
     ConnectionManager.initWorkerChannels(assignedRange.keys.toSeq)
+    
     val labeledFiles = await { new LabelingManager(FileManager.fileMergeDirName, FileManager.labelingDirName, assignedRange).start(sortedFiles) }
 
     labeledFiles.foreach {
