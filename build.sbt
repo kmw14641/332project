@@ -39,6 +39,8 @@ val commonSettings = Seq(
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
     "com.github.scopt" %% "scopt" % "4.1.0",
     "org.scala-lang.modules" %% "scala-async" % "1.0.1",
+    "ch.qos.logback" % "logback-classic" % "1.4.14",
+    "org.slf4j" % "slf4j-api" % "2.0.12"
   )
 )
 

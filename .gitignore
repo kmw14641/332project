@@ -7,3 +7,6 @@ metals.sbt
 .bsp
 .metals
 .vscode
+
+# log
+log
