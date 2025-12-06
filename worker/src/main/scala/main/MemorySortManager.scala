@@ -22,7 +22,6 @@ class MemorySortManager(outputSubDirName: String) {
   implicit val outputSubDir: OutputSubDir = OutputSubDir(outputSubDirName)
 
   def start = {
-    FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
     inMemorySort(ThreadpoolUtils.getChunkSize)
   }
 

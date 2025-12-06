@@ -23,7 +23,6 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
   implicit val outputSubDirNameImplicit: OutputSubDir = OutputSubDir(outputSubDirName)
 
   def start(files: List[String]) = {
-    FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
     assignFilesToWorkers(files)
   }
 

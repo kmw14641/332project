@@ -49,8 +49,6 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
 
             val selfIp = SystemUtils.getLocalIp.get
 
-            FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
-
             val workerFutures = shufflePlansToProcess.map {
                 case (workerIp, fileList) if workerIp != selfIp => processFilesSequentially(workerIp, fileList)
                 case (workerIp, fileList) => Future.successful(copyLocalFiles(fileList))

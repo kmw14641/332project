@@ -13,8 +13,6 @@ object StateRestoreManager {
     }
 
     def storeState(): Unit = this.synchronized {
-        FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
-
         val bos = new ByteArrayOutputStream()
         Using(new ObjectOutputStream(bos)) { oos =>
             WorkerState.synchronized { oos.writeObject(WorkerState.instance) }  // serialize to memory first, release lock, write to disk

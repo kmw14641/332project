@@ -32,6 +32,7 @@ object Main extends App {
   }
 
   FileManager.createDirectoryIfNotExists(outputDir)
+  FileManager.createAllSubDir
 
   ConnectionManager.initMasterChannel(masterIp, masterPort)
   FileManager.setInputDirs(inputDirs)

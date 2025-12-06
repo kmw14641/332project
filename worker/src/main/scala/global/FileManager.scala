@@ -177,6 +177,15 @@ object FileManager {
     }
   }
 
+  def createAllSubDir: Unit = {
+    outputSubDirNames.map(_.value).foreach { subDirName =>
+      outputDir.foreach { outDir =>
+        val subDirPath = Paths.get(outDir, subDirName).toString()
+        FileManager.createDirectoryIfNotExists(subDirPath)
+      }
+    }
+  }
+
   def deleteAllSubDir: Unit = {
     outputSubDirNames.map(_.value).foreach { subDirName =>
       outputDir.foreach { outDir =>

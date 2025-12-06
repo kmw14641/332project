@@ -26,7 +26,6 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
   implicit val outputSubDir: OutputSubDir = OutputSubDir(outputSubDirName)
 
   def start(files: List[String]) = {
-    FileManager.createDirectoryIfNotExists(FileManager.getFilePathFromOutputDir(""))
     val filenames = files.map { filename => {
       val oldFilePath = FileManager.getFilePathFromInputDir(filename)
       val newFilename = FileManager.getRandomFilename
