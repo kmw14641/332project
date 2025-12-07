@@ -55,13 +55,13 @@
 ## Fault tolerance
 
 ### Memory Sort Phase
-TBD
+- 파일마다 이미 sort되었으면 skip
 
 ### Disk Merge Phase
-TBD
+- merge가 완료된 iterator pair마다 skip
 
 ### Sampling Phase
-TBD
+- sync와 별반 다르지 않음
 
 ## Synchronization Phase
 - 파일 정보 전송: 파일 정보를 보내던 도중 워커가 죽을 수 있습니다. 전송이 완료되었음을 응답으로 받아 디스크에 기록하고, 워커가 켜졌을 때 완료되지 않은 전송을 재시작합니다.
@@ -77,6 +77,6 @@ TBD
 - 재시작 시 이전 워커의 진행 상태, 복구 동작을 정의하고 구현합니다.
 
 ## Further optimization
-- Sort Phase, Merge Phase 에서 병렬 연산: single disk I/O의 bottleneck을 직접 확인해본다.
-- key-value optimization: value가 90바이트인 점때문에 key-value를 직접 copy하는 것보다 포인터 참조 연산을 하면서 sort하는 것이 빠르다. key+(value index)쌍을 활용해 sort함으로써 참조 연산도 줄이고 copy overhead도 줄이는 방법이 더 빠른지 확인해본다.
-- file copy optimization: os heap -> jvm heap copy 연산을 줄이는 최적화
+- Sort Phase, Merge Phase 에서 병렬 연산: single disk I/O의 bottleneck을 직접 확인해본다. -> 처음부터 구현됨
+- key-value optimization: value가 90바이트인 점때문에 key-value를 직접 copy하는 것보다 포인터 참조 연산을 하면서 sort하는 것이 빠르다. key+(value index)쌍을 활용해 sort함으로써 참조 연산도 줄이고 copy overhead도 줄이는 방법이 더 빠른지 확인해본다. -> 그다지 도움될것같지않음
+- file copy optimization: os heap -> jvm heap copy 연산을 줄이는 최적화 -> 시간이 없다
