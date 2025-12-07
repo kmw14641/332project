@@ -9,7 +9,7 @@ import common.data.Data.{Record, KEY_SIZE, VALUE_SIZE, RECORD_SIZE}
 
 object ThreadpoolUtils {
   val MAX_CHUNK_SIZE_MB = 32  // Upper bound: 32 MiB
-  val MEMORY_OVERHEAD_FACTOR = 2 // Record overhead, almost 2.2x memory usage, but 2x is enough since there are lots of optimizations
+  val MEMORY_OVERHEAD_FACTOR = 2.2 // Record overhead, almost 2.2x memory usage
 
   /**
    * Calculate chunk size: at least 3 files should fit in RAM, with upper bound of 32MiB

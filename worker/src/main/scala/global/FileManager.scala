@@ -101,27 +101,30 @@ object FileManager {
 
     Using(FileChannel.open(file, StandardOpenOption.READ)) { channel =>
       val records = Array.ofDim[Record](count)
-      val keyBuffer = ByteBuffer.allocate(KEY_SIZE)
-      val valueBuffer = ByteBuffer.allocate(VALUE_SIZE)
+      val BUFFER_SIZE = 8 * 1024
+      val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
       
-      var position = offset * RECORD_SIZE
+      channel.position(offset * RECORD_SIZE)
+      buffer.flip()
+      
       var i = 0
       while (i < count) {
-        keyBuffer.clear()
-        valueBuffer.clear()
-        
-        val keyBytesRead = channel.read(keyBuffer, position)
-        val valueBytesRead = channel.read(valueBuffer, position + KEY_SIZE)
-        
-        if (keyBytesRead != KEY_SIZE || valueBytesRead != VALUE_SIZE) {
-          throw new RuntimeException(s"Incomplete read at position $position in $filePath (key: $keyBytesRead/$KEY_SIZE, value: $valueBytesRead/$VALUE_SIZE)")
+        if (buffer.remaining() < RECORD_SIZE) {
+          buffer.compact()
+          val bytesRead = channel.read(buffer)
+          buffer.flip()
+          if (bytesRead == -1 && buffer.remaining() < RECORD_SIZE) {
+            throw new RuntimeException(s"Unexpected EOF in $filePath")
+          }
         }
         
-        keyBuffer.flip()
-        valueBuffer.flip()
+        val keyBytes = new Array[Byte](KEY_SIZE)
+        val valueBytes = new Array[Byte](VALUE_SIZE)
         
-        records(i) = (ByteString.copyFrom(keyBuffer), ByteString.copyFrom(valueBuffer))
-        position += RECORD_SIZE
+        buffer.get(keyBytes)
+        buffer.get(valueBytes)
+        
+        records(i) = (ByteString.copyFrom(keyBytes), ByteString.copyFrom(valueBytes))
         i += 1
       }
       
@@ -139,28 +142,32 @@ object FileManager {
       StandardOpenOption.WRITE,
       StandardOpenOption.TRUNCATE_EXISTING
     )) { channel =>
-      val keyBuffer = ByteBuffer.allocate(KEY_SIZE)
-      val valueBuffer = ByteBuffer.allocate(VALUE_SIZE)
+      val BUFFER_SIZE = 8 * 1024
+      val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
       
       var i = 0
       while (i < records.length) {
         val (key, value) = records(i)
         
-        keyBuffer.clear()
-        keyBuffer.put(key.toByteArray)
-        keyBuffer.flip()
-        while (keyBuffer.hasRemaining) {
-          channel.write(keyBuffer)
+        if (buffer.remaining() < RECORD_SIZE) {
+          buffer.flip()
+          while (buffer.hasRemaining) {
+            channel.write(buffer)
+          }
+          buffer.clear()
         }
         
-        valueBuffer.clear()
-        valueBuffer.put(value.toByteArray)
-        valueBuffer.flip()
-        while (valueBuffer.hasRemaining) {
-          channel.write(valueBuffer)
-        }
+        buffer.put(key.toByteArray)
+        buffer.put(value.toByteArray)
         
         i += 1
+      }
+      
+      if (buffer.position() > 0) {
+        buffer.flip()
+        while (buffer.hasRemaining) {
+          channel.write(buffer)
+        }
       }
     }.get
   }
