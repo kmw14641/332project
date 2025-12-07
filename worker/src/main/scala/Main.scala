@@ -23,6 +23,9 @@ object Main extends App {
   private val logger = LoggerFactory.getLogger(getClass)
   implicit val ec: ExecutionContext = ExecutionContext.global
 
+  val start = System.currentTimeMillis()
+  logger.info("Distributed Sorting Started")
+
   val (masterIp, masterPort, inputDirs, outputDir) = WorkerOptionUtils.parse(args).getOrElse {
     sys.exit(1)
   }
@@ -102,4 +105,8 @@ object Main extends App {
   }
 
   Await.result(mainWaiting, Duration.Inf)
+
+  val end = System.currentTimeMillis()
+  val elapsedSeconds = (end - start) / 1000.0
+  logger.info(s"Distributed Sorting Ended. Time Elapsed: $elapsedSeconds seconds")
 }
