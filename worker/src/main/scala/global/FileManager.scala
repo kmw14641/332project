@@ -107,19 +107,19 @@ object FileManager {
       channel.position(offset * RECORD_SIZE)
       buffer.flip()
       
+      val keyBytes = new Array[Byte](KEY_SIZE)
+      val valueBytes = new Array[Byte](VALUE_SIZE)
+      
       var i = 0
       while (i < count) {
         if (buffer.remaining() < RECORD_SIZE) {
           buffer.compact()
           val bytesRead = channel.read(buffer)
           buffer.flip()
-          if (bytesRead == -1 && buffer.remaining() < RECORD_SIZE) {
-            throw new RuntimeException(s"Unexpected EOF in $filePath")
+          if (buffer.remaining() < RECORD_SIZE) {
+            throw new RuntimeException(s"Unexpected EOF or partial record in $filePath")
           }
         }
-        
-        val keyBytes = new Array[Byte](KEY_SIZE)
-        val valueBytes = new Array[Byte](VALUE_SIZE)
         
         buffer.get(keyBytes)
         buffer.get(valueBytes)
@@ -156,8 +156,8 @@ object FileManager {
           buffer.clear()
         }
         
-        buffer.put(key.toByteArray)
-        buffer.put(value.toByteArray)
+        key.copyTo(buffer)
+        value.copyTo(buffer)
         
         i += 1
       }
