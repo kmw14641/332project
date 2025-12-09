@@ -102,7 +102,7 @@ object FileManager {
 
     Using(FileChannel.open(file, StandardOpenOption.READ)) { channel =>
       val records = Array.ofDim[Record](count)
-      val buffer = ByteBuffer.allocateDirect(channel.size.toInt)
+      val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
       
       channel.position(offset * RECORD_SIZE)
       buffer.flip()
@@ -142,7 +142,7 @@ object FileManager {
       StandardOpenOption.WRITE,
       StandardOpenOption.TRUNCATE_EXISTING
     )) { channel =>
-      val buffer = ByteBuffer.allocateDirect(channel.size.toInt)
+      val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
       
       var i = 0
       while (i < records.length) {
