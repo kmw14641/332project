@@ -37,8 +37,10 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
           val newFilename = FileManager.getRandomFilename
           val oldFilePath = FileManager.getFilePathFromInputDir(filename)
           val newFilePath = FileManager.getFilePathFromOutputDir(newFilename)
+          logger.info(s"copy start $filenmae")
           
           FileManager.copy(oldFilePath, newFilePath)
+          logger.info(s"copy end $filenmae")
           newFilename
         }
       }}
