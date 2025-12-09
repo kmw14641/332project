@@ -18,7 +18,7 @@ import common.utils.SystemUtils
 
 object FileManager {
   private val logger = LoggerFactory.getLogger(getClass)
-  private val BUFFER_SIZE = 8 * 1024 // 8KiB
+  private val BUFFER_SIZE = 180 * 1024 * 1024 // 8KiB
 
   case class InputSubDir(val value: String)
   case class OutputSubDir(val value: String)
@@ -102,7 +102,7 @@ object FileManager {
 
     Using(FileChannel.open(file, StandardOpenOption.READ)) { channel =>
       val records = Array.ofDim[Record](count)
-      val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
+      val buffer = ByteBuffer.allocateDirect(math.min(BUFFER_SIZE, channel.size()).toInt)
       
       channel.position(offset * RECORD_SIZE)
       buffer.flip()
@@ -142,7 +142,7 @@ object FileManager {
       StandardOpenOption.WRITE,
       StandardOpenOption.TRUNCATE_EXISTING
     )) { channel =>
-      val buffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
+      val buffer = ByteBuffer.allocateDirect(math.min(BUFFER_SIZE, channel.size()).toInt)
       
       var i = 0
       while (i < records.length) {

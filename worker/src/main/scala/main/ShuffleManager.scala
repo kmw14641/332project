@@ -126,14 +126,12 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String) {
             }
 
             override def onNext(response: DownloadResponse): Unit = {
-                GlobalLock.diskIoLock.synchronized {
                     blocking {
                         val writeBuffer = response.data.asReadOnlyByteBuffer()
                         while (writeBuffer.hasRemaining) {
                             fileChannel.write(writeBuffer)
                         }
                     }
-                }
                 assert { clientObserver.isDefined }
                 clientObserver.get.request(1)
             }
