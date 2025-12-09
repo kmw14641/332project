@@ -24,6 +24,7 @@ class MemorySortManager(outputSubDirName: String) {
   implicit val outputSubDir: OutputSubDir = OutputSubDir(outputSubDirName)
 
   def start = {
+    logger.info(s"chunkSize: ${ThreadpoolUtils.getChunkSize}")
     inMemorySort(ThreadpoolUtils.getChunkSize)
   }
 
