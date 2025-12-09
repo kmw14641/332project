@@ -114,7 +114,7 @@ object FileManager {
       while (i < count) {
         if (buffer.remaining() < RECORD_SIZE) {
           buffer.compact()
-          val bytesRead = channel.read(buffer)
+          val bytesRead = GlobalLock.diskIoLock.synchronized { channel.read(buffer) }
           buffer.flip()
           if (buffer.remaining() < RECORD_SIZE) {
             throw new RuntimeException(s"Unexpected EOF or partial record in $filePath")
@@ -151,7 +151,7 @@ object FileManager {
         if (buffer.remaining() < RECORD_SIZE) {
           buffer.flip()
           while (buffer.hasRemaining) {
-            channel.write(buffer)
+            GlobalLock.diskIoLock.synchronized { channel.write(buffer) }
           }
           buffer.clear()
         }
