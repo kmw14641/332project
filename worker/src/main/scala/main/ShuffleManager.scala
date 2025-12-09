@@ -18,16 +18,12 @@ import global.FileManager.{InputSubDir, OutputSubDir}
 import global.StateRestoreManager
 import scala.collection.mutable
 import state.ShuffleState
-import java.util.concurrent.Executors
-import utils.ThreadpoolUtils
 
-class ShuffleManager(inputSubDirName: String, outputSubDirName: String) {
+class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit ec: ExecutionContext) {
     private val logger = LoggerFactory.getLogger(getClass)
     
     implicit val inputSubDirNameImplicit: InputSubDir = InputSubDir(inputSubDirName)
     implicit val outputSubDirNameImplicit: OutputSubDir = OutputSubDir(outputSubDirName)
-    val threadPool = Executors.newFixedThreadPool(ThreadpoolUtils.getThreadCount)
-    implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(threadPool)
     val maxTries = 10
 
 	def start(shufflePlans: Map[String, Seq[String]]): Future[List[List[String]]] = async {  // TODO: make input as optional, if none, restore
@@ -126,12 +122,14 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String) {
             }
 
             override def onNext(response: DownloadResponse): Unit = {
+                GlobalLock.diskIoLock.synchronized {
                     blocking {
                         val writeBuffer = response.data.asReadOnlyByteBuffer()
                         while (writeBuffer.hasRemaining) {
                             fileChannel.write(writeBuffer)
                         }
                     }
+                }
                 assert { clientObserver.isDefined }
                 clientObserver.get.request(1)
             }
