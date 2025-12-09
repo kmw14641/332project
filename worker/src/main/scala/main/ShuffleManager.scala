@@ -18,12 +18,16 @@ import global.FileManager.{InputSubDir, OutputSubDir}
 import global.StateRestoreManager
 import scala.collection.mutable
 import state.ShuffleState
+import java.util.concurrent.Executors
+import utils.ThreadpoolUtils
 
-class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit ec: ExecutionContext) {
+class ShuffleManager(inputSubDirName: String, outputSubDirName: String) {
     private val logger = LoggerFactory.getLogger(getClass)
     
     implicit val inputSubDirNameImplicit: InputSubDir = InputSubDir(inputSubDirName)
     implicit val outputSubDirNameImplicit: OutputSubDir = OutputSubDir(outputSubDirName)
+    val threadPool = Executors.newFixedThreadPool(ThreadpoolUtils.getThreadCount)
+    implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(threadPool)
     val maxTries = 10
 
 	def start(shufflePlans: Map[String, Seq[String]]): Future[List[List[String]]] = async {  // TODO: make input as optional, if none, restore
@@ -55,9 +59,11 @@ class ShuffleManager(inputSubDirName: String, outputSubDirName: String)(implicit
             }
             await { Future.sequence(workerFutures) }
             logger.info("shuffle completed")
-
+            logger.info("s1")
             ShuffleState.completeShuffle()
+            logger.info("s2")
             StateRestoreManager.storeState()
+            logger.info("s3")
         }
 
         shufflePlansWithCompleted.values.map(_.keys.toList.sortBy(name => {

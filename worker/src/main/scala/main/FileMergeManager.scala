@@ -42,14 +42,17 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
           newFilename
         }
       }}
+      logger.info("s5")
 
       FileMergeState.setCurrentFileLists(filenames)
       FileMergeState.setRound(1)
       StateRestoreManager.storeState()
+      logger.info("s6")
 
       FileManager.deleteAll(files.flatten.map(FileManager.getFilePathFromInputDir))
     }
 
+    logger.info("s7")
     twoWayMergeSort
   }
 
@@ -78,6 +81,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
 
     var currentLists = FileMergeState.getCurrentFileLists.get
     var round = FileMergeState.getRound
+    logger.info("s8")
 
     while (currentLists.size > 1) {
       logger.info(s"Starting merge round $round with ${currentLists.size} file lists")

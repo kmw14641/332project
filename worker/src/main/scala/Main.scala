@@ -88,6 +88,8 @@ object Main extends App {
 
     val completedShufflePlans = await { new ShuffleManager(FileManager.labelingDirName, FileManager.shuffleDirName).start(shufflePlans) }
 
+    logger.info("s4")
+
     val finalFiles = await { new FileMergeManager(FileManager.shuffleDirName, FileManager.finalDirName).start(completedShufflePlans, WorkerState.shuffleMerge) }
     
     val selfIndex = assignedRange.keys.map(_._1).toList.sorted.indexOf(SystemUtils.getLocalIp)
