@@ -106,7 +106,7 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
       }
       
       val futures = pendingPairs.map { case ((list1, list2), index) =>
-        async {
+        {
           val threadId = Thread.currentThread().getName
           logger.info(s"[Round$round][$threadId] Merging list pair $index: ${list1.size} files + ${list2.size} files")
           val filePathList1 = FileManager.getFilePathFromOutputDirAll(list1)
@@ -120,8 +120,6 @@ class FileMergeManager(inputSubDirName: String, outputSubDirName: String) {
           (index, outputFiles)
         }
       }
-
-      await { Future.sequence(futures) }
       
       // Reconstruct results in order
       val results = (0 until listPairs.size).map { i =>

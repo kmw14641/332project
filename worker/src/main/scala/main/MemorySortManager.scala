@@ -44,7 +44,7 @@ class MemorySortManager(outputSubDirName: String) {
     val sortedFiles = new ConcurrentLinkedQueue[String]()
     
     val futures = allFiles.map { filePath =>
-      async {
+      {
         if (MemorySortState.isFileProcessed(filePath)) {
           logger.info(s"Skip sorting for $filePath")
           val outputs = MemorySortState.getProcessedFiles(filePath)
@@ -95,11 +95,7 @@ class MemorySortManager(outputSubDirName: String) {
       }
     }
 
-    Future.sequence(futures)
-    .map {
-      case _ => 
-        threadPool.shutdown()
-        sortedFiles.asScala.toList
-    }
+    threadPool.shutdown()
+    Future.successful(sortedFiles.asScala.toList)
   }
 }
