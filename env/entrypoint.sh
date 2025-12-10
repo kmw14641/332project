@@ -9,8 +9,8 @@ if [ "$ROLE" != "master" ]; then
     
     RECORDS=335544
     
-    NUM_DIRS=${NUM_DIRS:-4} # n of input directory = 4
-    FILES_PER_DIR=${FILES_PER_DIR:-4}  # n of input files per directory = 4
+    NUM_DIRS=${NUM_DIRS:-10} # n of input directory = 10 (10 * 16 = 160 files = 5GB total)
+    FILES_PER_DIR=${FILES_PER_DIR:-16}  # n of input files per directory = 16 (32MB * 16 = 512MB per dir)
     
     echo "Creating ${NUM_DIRS} directories with ${FILES_PER_DIR} files each (32MB per file)"
     
@@ -31,6 +31,8 @@ if [ "$ROLE" != "master" ]; then
     echo "Data generation complete!"
     echo "Total: $((NUM_DIRS * FILES_PER_DIR)) files, $((NUM_DIRS * FILES_PER_DIR * 32))MB of data"
 fi
+
+mkdir -p /app/result
 
 # Execute the CMD (or command from docker-compose)
 exec "$@"
