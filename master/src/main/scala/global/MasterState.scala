@@ -3,7 +3,7 @@ package global
 import org.slf4j.LoggerFactory
 import master.MasterService.WorkerInfo
 import scala.collection.mutable.ArrayBuffer
-import common.data.Data.getKeyOrdering
+import common.data.Data.{Key, getKeyOrdering}
 import scala.concurrent.{Promise, Future}
 
 // Master Singleton
@@ -12,9 +12,9 @@ object MasterState {
   
   private var workersNum: Int = -1
   private var registeredWorkers = Map[String, WorkerInfo]()
-  private var samples = Map[String, Seq[Array[Byte]]]()  // workerIp -> sampled keys
+  private var samples = Map[String, Seq[Key]]()  // workerIp -> sampled keys
   private var calculateRangesStarted = false
-  private var ranges = Map[(String, Int), (Array[Byte], Array[Byte])]()  // (start, end) for each worker
+  private var ranges = Map[(String, Int), (Key, Key)]()  // (start, end) for each worker
   private var syncCompletedWorkers = Set[String]()
   private var shuffleStarted = false
   private var finalMergeCompletedWorkers = Set[String]()
@@ -56,7 +56,7 @@ object MasterState {
 
   def getRegisteredWorkers: Map[String, WorkerInfo] = this.synchronized { registeredWorkers }
 
-  def addSamples(workerIp: String, keys: Seq[Array[Byte]]): Boolean = this.synchronized {
+  def addSamples(workerIp: String, keys: Seq[Key]): Boolean = this.synchronized {
     if (!registeredWorkers.contains(workerIp)) {
       logger.warn(s"Warning: Received samples from unregistered worker: $workerIp")
       return false
@@ -90,15 +90,14 @@ object MasterState {
       sortedKeys(math.max(0, idx))
     }
 
-    val rangeBuffer = ArrayBuffer[(Array[Byte], Array[Byte])]()
+    val rangeBuffer = ArrayBuffer[(Key, Key)]()
     var previousKey = new Array[Byte](10) // 0-filled by default
     for (key <- rangesSeq) {
       rangeBuffer.append((previousKey, key))
       previousKey = key
     }
     
-    val lastKey = new Array[Byte](11)
-    lastKey(0) = 1 // The rest are 0s
+    val lastKey = Array.fill[Byte](10)(0xFF.toByte)  // key larger than any possible key
     rangeBuffer.append((previousKey, lastKey))  // Last range to infinity
 
     ranges = workers.zip(rangeBuffer).map {
@@ -106,7 +105,7 @@ object MasterState {
     }.toMap
   }
 
-  def getRanges: Map[(String, Int), (Array[Byte], Array[Byte])] = this.synchronized { ranges }
+  def getRanges: Map[(String, Int), (Key, Key)] = this.synchronized { ranges }
 
   def isRangesReady: Boolean = this.synchronized { ranges.nonEmpty }
 

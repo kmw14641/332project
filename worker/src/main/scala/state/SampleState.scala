@@ -1,10 +1,10 @@
 package state
 
-import common.data.Data.Key
 import scala.concurrent.Promise
 import scala.concurrent.Future
 import global.WorkerState
 import global.Restorable
+import common.data.Data.Key
 
 class SampleState extends Serializable with Restorable {
   private var sendSampleCompleted = false

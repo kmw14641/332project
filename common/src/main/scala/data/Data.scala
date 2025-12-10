@@ -3,6 +3,7 @@ package common.data
 import scala.math.Ordering
 
 object Data {
+  type Key = Array[Byte]
   type Record = Array[Byte]
 
   val RECORD_SIZE = 100
@@ -26,10 +27,9 @@ object Data {
     }
   }
 
-  val getKeyOrdering: Ordering[Array[Byte]] = {
-    new Ordering[Array[Byte]] {
-      override def compare(x: Array[Byte], y: Array[Byte]): Int = {
-        val len = Math.min(x.length, y.length)
+  val getKeyOrdering: Ordering[Key] = {
+    new Ordering[Key] {
+      override def compare(x: Key, y: Key): Int = {
         var i = 0
         while (i < KEY_SIZE) {
           val a = x(i) & 0xFF

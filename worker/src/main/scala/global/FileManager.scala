@@ -106,9 +106,7 @@ object FileManager {
       
       channel.position(offset * RECORD_SIZE)
       buffer.flip()
-      
-      val keyBytes = new Array[Byte](KEY_SIZE)
-      val valueBytes = new Array[Byte](VALUE_SIZE)
+      val record = new Array[Byte](RECORD_SIZE)
       
       var i = 0
       while (i < count) {
@@ -121,10 +119,9 @@ object FileManager {
           }
         }
         
-        buffer.get(keyBytes)
-        buffer.get(valueBytes)
+        buffer.get(record)
         
-        records(i) = (ByteString.copyFrom(keyBytes), ByteString.copyFrom(valueBytes))
+        records(i) = record
         i += 1
       }
       
@@ -146,7 +143,7 @@ object FileManager {
       
       var i = 0
       while (i < records.length) {
-        val (key, value) = records(i)
+        val record = records(i)
         
         if (buffer.remaining() < RECORD_SIZE) {
           buffer.flip()
@@ -156,8 +153,7 @@ object FileManager {
           buffer.clear()
         }
         
-        key.copyTo(buffer)
-        value.copyTo(buffer)
+        buffer.put(record)
         
         i += 1
       }

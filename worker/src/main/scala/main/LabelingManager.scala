@@ -47,12 +47,16 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
     logger.info(s"Starting file assignment with ${files.size} sorted files")
     
     // Sort workers by start key
-    implicit val cp = getRecordOrdering
+    implicit val cp = new Ordering[((String, Int), (Key, Key))] {
+      override def compare(x: ((String, Int), (Key, Key)), y: ((String, Int), (Key, Key))): Int = {
+        getKeyOrdering.compare(x._2._1, y._2._1)
+      }
+    }
     val sortedWorkers = assignedRange.toList.sorted
     
     logger.info(s"Worker ranges (sorted):")
     sortedWorkers.foreach { case ((ip, port), (start, end)) =>
-      logger.info(s"  $ip:$port -> [${new java.math.BigInteger(1, start.toByteArray()).toString(16)}, ${new java.math.BigInteger(1, end.toByteArray()).toString(16)})")
+      logger.info(s"  $ip:$port -> [${new java.math.BigInteger(1, start).toString(16)}, ${new java.math.BigInteger(1, end).toString(16)})")
     }
     
     // Get file metadata (filename, startKey, endKey) in sorted order
@@ -130,8 +134,8 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
               val remainingFilePath = FileManager.getFilePathFromInputDir(remainingFilename)
               FileManager.writeRecords(remainingFilePath, part2Records)
               
-              val remainingStartKey = part2Records.head._1
-              val remainingEndKey = part2Records.last._1
+              val remainingStartKey = getKey(part2Records.head)
+              val remainingEndKey = getKey(part2Records.last)
               logger.info(s"✓ Created part2: $remainingFilename (${part2Records.length} records) - pushed to front")
 
               // Return remaining files with part2 prepended, and stop processing for this worker
@@ -180,7 +184,7 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
     
     while (left < right) {
       val mid = left + (right - left) / 2
-      if (comparator.compare(records(mid)._1, splitKey) < 0) {
+      if (comparator.compare(getKey(records(mid)), splitKey) < 0) {
         left = mid + 1
       } else {
         right = mid
@@ -188,6 +192,12 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
     }
     
     left
+  }
+
+  private def getKey(record: Record): Key = {
+    val key = new Array[Byte](KEY_SIZE)
+    Array.copy(record, 0, key, 0, KEY_SIZE)
+    key
   }
   
   // Removed loadFileRecords and writeRecordsToFile as they are now in RecordIOUtils
@@ -204,9 +214,8 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
       // Read first record
       channel.read(buffer)
       buffer.flip()
-      val firstKeyBytes = new Array[Byte](KEY_SIZE)
-      buffer.get(firstKeyBytes)
-      val firstKey = ByteString.copyFrom(firstKeyBytes)
+      val firstKey = new Array[Byte](KEY_SIZE)
+      buffer.get(firstKey)
       
       // Read last record
       val fileSize = Files.size(path)
@@ -214,9 +223,8 @@ class LabelingManager(inputSubDirName: String, outputSubDirName: String, assigne
       buffer.clear()
       channel.read(buffer)
       buffer.flip()
-      val lastKeyBytes = new Array[Byte](KEY_SIZE)
-      buffer.get(lastKeyBytes)
-      val lastKey = ByteString.copyFrom(lastKeyBytes)
+      val lastKey = new Array[Byte](KEY_SIZE)
+      buffer.get(lastKey)
       
       (firstKey, lastKey)
     } finally {

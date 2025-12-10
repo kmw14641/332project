@@ -48,7 +48,7 @@ class SampleManager(implicit ec: ExecutionContext) {
     
       val request = SampleData(
         workerIp = workerIp,
-        keys = samples
+        keys = samples.map(ByteString.copyFrom)
       )
 
       await { stub.sampling(request) }
@@ -98,7 +98,7 @@ class SampleManager(implicit ec: ExecutionContext) {
             val position = recordIdx.toLong * RECORD_SIZE
             try {
               channel.read(buffer, position)
-              results.add(ByteString.copyFrom(buffer.array()))
+              results.add(buffer.array().clone())
             } catch {
               case e: Exception => 
                   logger.error(s"Error reading record at index $recordIdx from file $filePath: ${e.getMessage}")

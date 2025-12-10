@@ -15,6 +15,7 @@ import io.grpc.StatusException
 import io.grpc.Status
 import worker.WorkerService.RangeAssignment
 import java.math.BigInteger
+import common.data.Data.Key
 
 class SampleServiceImpl(implicit ec: ExecutionContext) extends SampleServiceGrpc.SampleService {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -29,7 +30,7 @@ class SampleServiceImpl(implicit ec: ExecutionContext) extends SampleServiceGrpc
           throw new StatusException(Status.INVALID_ARGUMENT.withDescription("RangeAssignment is missing"))
         )
 
-        (workerInfo.ip, workerInfo.port) -> (rangeInfo.start, rangeInfo.end)
+        (workerInfo.ip, workerInfo.port) -> (rangeInfo.start.toByteArray, rangeInfo.end.toByteArray)
       }
     }.toMap
 
@@ -41,8 +42,8 @@ class SampleServiceImpl(implicit ec: ExecutionContext) extends SampleServiceGrpc
     workersRangeAssignment.foreach {
       // Print assigned ranges for debugging
       case ((ip, port), (start, end)) =>
-        val startInt = new BigInteger(1, start.toByteArray())
-        val endInt = new BigInteger(1, end.toByteArray())
+        val startInt = new BigInteger(1, start)
+        val endInt = new BigInteger(1, end)
         logger.info(s"Assigned range to worker $ip:$port => [${startInt.toString(16)}, ${endInt.toString(16)})")
     }
 

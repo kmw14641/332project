@@ -1,8 +1,8 @@
 package global
 
 import scala.concurrent.{Future, Promise}
-import common.data.Data.Key
 import com.google.protobuf.ByteString
+import common.data.Data.Key
 import state.{SampleState, LabelingState, SynchronizationState, TerminationState, MemorySortState, FileMergeState}
 import state.ShuffleState
 
