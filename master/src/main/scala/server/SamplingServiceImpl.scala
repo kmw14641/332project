@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.async.Async.{async, await}
+import com.google.protobuf.ByteString
 import master.MasterService.{SampleData, SampleResponse, SamplingServiceGrpc}
 import global.{MasterState, ConnectionManager}
 import worker.WorkerService.{SampleServiceGrpc, WorkersRangeAssignment, WorkerRangeAssignment, WorkerNetworkInfo, RangeAssignment}
@@ -13,7 +14,7 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
   private val logger = LoggerFactory.getLogger(getClass)
   
   override def sampling(request: SampleData): Future[SampleResponse] = {
-    val keys = request.keys
+    val keys = request.keys.map(_.toByteArray)
     val success = MasterState.addSamples(request.workerIp, keys)
 
     // If all workers have sent samples, spawn a thread to calculate ranges and assign them
@@ -41,7 +42,7 @@ class SamplingServiceImpl(implicit ec: ExecutionContext) extends SamplingService
       assignments = ranges.map { case ((workerIp, workerPort), (start, end)) =>
         WorkerRangeAssignment(
           worker = Some(WorkerNetworkInfo(ip = workerIp, port = workerPort)),
-          range = Some(RangeAssignment(start = start, end = end))
+          range = Some(RangeAssignment(start = ByteString.copyFrom(start), end = ByteString.copyFrom(end)))
         )
       }.toSeq
     )
