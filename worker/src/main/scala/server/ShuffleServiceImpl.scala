@@ -57,9 +57,7 @@ class ShuffleServiceImpl(inputSubDirName: String)(implicit ec: ExecutionContext)
                     // 따라서 done이 필요함. (Runnable은 동시에 실행되지 않아서 lock은 없어도 됨 (gpt 피셜))
                     while (serverObserver.isReady && !done.get()) {
                         buffer.clear()
-                        val bytesRead = GlobalLock.diskIoLock.synchronized {
-                            fileChannel.read(buffer)
-                        }
+                        val bytesRead = fileChannel.read(buffer)
                         if (bytesRead == -1) {
                             done.set(true)
                             responseObserver.onCompleted()
