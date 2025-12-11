@@ -10,3 +10,6 @@ metals.sbt
 
 # log
 log
+
+# profiling result
+result

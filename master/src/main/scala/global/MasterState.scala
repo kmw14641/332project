@@ -3,8 +3,7 @@ package global
 import org.slf4j.LoggerFactory
 import master.MasterService.WorkerInfo
 import scala.collection.mutable.ArrayBuffer
-import com.google.protobuf.ByteString
-import common.data.Data.{Key, Record, getKeyOrdering}
+import common.data.Data.{Key, getKeyOrdering}
 import scala.concurrent.{Promise, Future}
 
 // Master Singleton
@@ -15,7 +14,7 @@ object MasterState {
   private var registeredWorkers = Map[String, WorkerInfo]()
   private var samples = Map[String, Seq[Key]]()  // workerIp -> sampled keys
   private var calculateRangesStarted = false
-  private var ranges = Map[(String, Int), Record]()  // (start, end) for each worker
+  private var ranges = Map[(String, Int), (Key, Key)]()  // (start, end) for each worker
   private var syncCompletedWorkers = Set[String]()
   private var shuffleStarted = false
   private var finalMergeCompletedWorkers = Set[String]()
@@ -91,20 +90,22 @@ object MasterState {
       sortedKeys(math.max(0, idx))
     }
 
-    val rangeBuffer = ArrayBuffer[Record]()
-    var previousKey = ByteString.copyFrom(Array.fill[Byte](10)(0))
+    val rangeBuffer = ArrayBuffer[(Key, Key)]()
+    var previousKey = new Array[Byte](10) // 0-filled by default
     for (key <- rangesSeq) {
       rangeBuffer.append((previousKey, key))
       previousKey = key
     }
-    rangeBuffer.append((previousKey, ByteString.copyFrom(Array.fill[Byte](1)(1) ++ Array.fill[Byte](10)(0))))  // Last range to infinity
+    
+    val lastKey = Array.fill[Byte](10)(0xFF.toByte)  // key larger than any possible key
+    rangeBuffer.append((previousKey, lastKey))  // Last range to infinity
 
     ranges = workers.zip(rangeBuffer).map {
       case ((ip, port), (start, end)) => ((ip, port) -> (start, end))
     }.toMap
   }
 
-  def getRanges: Map[(String, Int), Record] = this.synchronized { ranges }
+  def getRanges: Map[(String, Int), (Key, Key)] = this.synchronized { ranges }
 
   def isRangesReady: Boolean = this.synchronized { ranges.nonEmpty }
 

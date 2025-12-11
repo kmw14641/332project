@@ -38,9 +38,21 @@ RUN curl -o /tmp/gensort.tar.gz https://www.ordinal.com/try.cgi/gensort-linux-1.
     mv /tmp/gensort/64/gensort /usr/local/bin/gensort && \
     mv /tmp/gensort/64/valsort /usr/local/bin/valsort && \
     rm -rf /tmp/gensort /tmp/gensort.tar.gz
+	
+# Install Async-Profiler
+RUN wget -O /tmp/async-profiler.tar.gz https://github.com/async-profiler/async-profiler/releases/download/v4.2.1/async-profiler-4.2.1-linux-x64.tar.gz && \
+    mkdir -p /tmp/async-profiler && \
+    tar -xzf /tmp/async-profiler.tar.gz -C /tmp/async-profiler && \
+    mv /tmp/async-profiler/async-profiler-4.2.1-linux-x64/bin/asprof /usr/local/bin/asprof && \
+    mv /tmp/async-profiler/async-profiler-4.2.1-linux-x64/lib/libasyncProfiler.so /usr/local/lib/libasyncProfiler.so && \
+    rm -rf /tmp/async-profiler /tmp/async-profiler.tar.gz
 
 # Working directory
 WORKDIR /app
+
+COPY .bashrc .
+RUN cat .bashrc >> /root/.bashrc && \
+	rm .bashrc
 
 ENTRYPOINT ["/app/env/entrypoint.sh"]
 CMD ["/bin/bash"]
